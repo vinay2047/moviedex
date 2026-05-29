@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="342" height="513" viewBox="0 0 342 513" fill="none">
+  <rect width="342" height="513" rx="12" fill="#14142b"/>
+  <path d="M171 220c-22 0-40 18-40 40s18 40 40 40 40-18 40-40-18-40-40-40zm0 64c-13.3 0-24-10.7-24-24s10.7-24 24-24 24 10.7 24 24-10.7 24-24 24z" fill="#3d3d66"/>
+  <path d="M203 196h-8.6l-6.4-8.5c-1.5-2-3.8-3.2-6.3-3.2h-21.4c-2.5 0-4.8 1.2-6.3 3.2l-6.4 8.5H139c-6.6 0-12 5.4-12 12v64c0 6.6 5.4 12 12 12h64c6.6 0 12-5.4 12-12v-64c0-6.6-5.4-12-12-12z" fill="#3d3d66"/>
+  <text x="171" y="320" text-anchor="middle" fill="#5a5a80" font-family="system-ui" font-size="14" font-weight="500">No Poster</text>
+</svg>
