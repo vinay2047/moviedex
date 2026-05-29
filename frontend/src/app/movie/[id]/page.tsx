@@ -29,6 +29,7 @@ export default function MovieDetailPage() {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [pendingRating, setPendingRating] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [isWatched, setIsWatched] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -40,6 +41,10 @@ export default function MovieDetailPage() {
         ]);
         setMovie(movieRes.data);
         setSimilar(similarRes.data);
+        // If the movie already has a user rating, it's been watched
+        if (movieRes.data.user_rating !== null) {
+          setIsWatched(true);
+        }
       } catch (err) {
         console.error("Failed to load movie:", err);
       } finally {
@@ -49,7 +54,7 @@ export default function MovieDetailPage() {
     if (movieId) load();
   }, [movieId]);
 
-  // Simple watchlist toggle — no dialog
+  // Toggle watchlist (simple add/remove, no dialog)
   const handleToggleWatchlist = async () => {
     if (!movie) return;
     try {
@@ -65,13 +70,13 @@ export default function MovieDetailPage() {
     }
   };
 
-  // Open the "Mark as Watched" rating dialog
+  // Open the rating dialog
   const handleMarkAsWatchedClick = () => {
-    setPendingRating(null);
+    setPendingRating(movie?.user_rating ?? null);
     setShowRatingDialog(true);
   };
 
-  // Save from the dialog — upsert rating
+  // Save from the dialog
   const handleMarkAsWatched = async () => {
     if (!movie) return;
     setSaving(true);
@@ -82,6 +87,7 @@ export default function MovieDetailPage() {
           prev ? { ...prev, user_rating: pendingRating } : prev
         );
       }
+      setIsWatched(true);
       setShowRatingDialog(false);
     } catch (err) {
       console.error("Failed to save:", err);
@@ -119,6 +125,7 @@ export default function MovieDetailPage() {
   const year = movie.release_date?.split("-")[0];
   const hours = movie.runtime ? Math.floor(movie.runtime / 60) : null;
   const mins = movie.runtime ? movie.runtime % 60 : null;
+  const inWatchlist = movie.in_watch_history;
 
   return (
     <>
@@ -201,70 +208,86 @@ export default function MovieDetailPage() {
                 </p>
               )}
 
-              {/* User actions */}
-              <div className="mt-8 flex flex-wrap items-center gap-4">
-                {/* Add to Watchlist toggle */}
-                <button
-                  onClick={handleToggleWatchlist}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                    movie.in_watch_history
-                      ? "bg-primary-600/15 text-primary-400 border border-primary-500/25 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25"
-                      : "btn-primary"
-                  }`}
-                  id="toggle-watchlist"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill={movie.in_watch_history ? "currentColor" : "none"}
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth={movie.in_watch_history ? 0 : 1.5}
+              {/* ── Action Buttons ─────────────────────────────────────── */}
+              <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3 max-w-md">
+                {isWatched ? (
+                  /* Watched State: single "Watched" indicator, clickable to update rating */
+                  <button
+                    onClick={handleMarkAsWatchedClick}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm bg-emerald-500/12 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/18 transition-colors duration-200 cursor-pointer"
+                    title="Click to update your rating"
+                    id="watched-indicator"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
-                    />
-                  </svg>
-                  {movie.in_watch_history ? "In Watchlist" : "Add to Watchlist"}
-                </button>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Watched</span>
+                    {movie.user_rating !== null && (
+                      <span className="flex items-center gap-1 ml-1 text-emerald-400/80">
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        {movie.user_rating}/5
+                      </span>
+                    )}
+                  </button>
+                ) : (
+                  /* Default State: two uniform-width buttons */
+                  <>
+                    {/* Watchlist — outline style */}
+                    <button
+                      onClick={handleToggleWatchlist}
+                      className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-colors duration-200 ${
+                        inWatchlist
+                          ? "bg-primary-600/12 text-primary-400 border-primary-500/25 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25"
+                          : "bg-transparent text-surface-200 border-surface-600 hover:border-surface-400 hover:text-surface-100"
+                      }`}
+                      id="toggle-watchlist"
+                    >
+                      {inWatchlist ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                        </svg>
+                      )}
+                      {inWatchlist ? "In Watchlist" : "Watchlist"}
+                    </button>
 
-                {/* Mark as Watched — opens rating dialog */}
-                <button
-                  onClick={handleMarkAsWatchedClick}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm btn-secondary"
-                  id="mark-as-watched"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Mark as Watched
-                </button>
-
-                {/* Your rating (shown inline if already rated) */}
-                {movie.user_rating !== null && (
-                  <div className="flex items-center gap-2 text-sm text-surface-400">
-                    <span>Your rating:</span>
-                    <StarRating value={movie.user_rating} readonly size="sm" />
-                  </div>
+                    {/* Mark Watched — solid accent style */}
+                    <button
+                      onClick={handleMarkAsWatchedClick}
+                      className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm btn-primary transition-colors duration-200"
+                      id="mark-as-watched"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Mark Watched
+                    </button>
+                  </>
                 )}
+              </div>
 
-                {/* Trailer */}
-                {movie.trailer_key && (
+              {/* Trailer link — subtle, below action buttons */}
+              {movie.trailer_key && (
+                <div className="mt-4">
                   <a
                     href={`https://www.youtube.com/watch?v=${movie.trailer_key}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 btn-secondary"
+                    className="inline-flex items-center gap-2 text-sm text-surface-400 hover:text-surface-200 transition-colors duration-200"
                     id="watch-trailer"
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                     Watch Trailer
                   </a>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Cast */}
               {movie.cast_top5 && movie.cast_top5.length > 0 && (
@@ -346,7 +369,7 @@ export default function MovieDetailPage() {
               {pendingRating !== null && (
                 <button
                   onClick={() => setPendingRating(null)}
-                  className="text-xs text-surface-500 hover:text-surface-300 transition-colors"
+                  className="text-xs text-surface-500 hover:text-surface-300 transition-colors duration-200"
                 >
                   Clear rating
                 </button>

@@ -13,8 +13,10 @@ export default function Navbar() {
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     const getUser = async () => {
@@ -54,6 +56,27 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Smart Navbar Scroll Logic
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Only hide if we've scrolled down a bit to avoid jitter at the very top
+      if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
+        // Scrolling down
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY.current) {
+        // Scrolling up
+        setIsVisible(true);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handleSignOut = async () => {
     setDropdownOpen(false);
     await supabase.auth.signOut();
@@ -87,7 +110,11 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="glass sticky top-0 z-50">
+    <nav 
+      className={`glass sticky top-0 z-50 transition-transform duration-300 ease-in-out ${
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      }`}
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
