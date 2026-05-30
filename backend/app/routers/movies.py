@@ -44,29 +44,48 @@ async def search_movies(
     }
 
 
+from sqlalchemy import extract
+
 @router.get("/popular", response_model=dict)
 async def get_popular_movies(
     db: DbSession,
     limit: int = Query(20, ge=1, le=50),
     offset: int = Query(0, ge=0),
+    genre_id: int | None = Query(None, description="Filter by genre ID"),
+    min_year: int | None = Query(None, description="Filter by min release year"),
+    max_year: int | None = Query(None, description="Filter by max release year"),
+    min_rating: float | None = Query(None, description="Filter by minimum rating"),
+    sort_by: str | None = Query(None, description="Sort order: vote_average_desc, release_date_desc")
 ) -> dict:
     """Get popular movies ordered by TMDB vote average (with vote count threshold)."""
     # Require at least 50 votes to avoid obscure high-rated movies
     vote_threshold = 50
 
-    count_query = select(func.count(Movie.id)).where(
+    conditions = [
         Movie.vote_count.isnot(None),
         Movie.vote_count >= vote_threshold,
-    )
+    ]
+
+    if genre_id is not None:
+        conditions.append(Movie.genres.contains([{"id": genre_id}]))
+    if min_year is not None:
+        conditions.append(extract('year', Movie.release_date) >= min_year)
+    if max_year is not None:
+        conditions.append(extract('year', Movie.release_date) <= max_year)
+    if min_rating is not None:
+        conditions.append(Movie.vote_average >= min_rating)
+
+    count_query = select(func.count(Movie.id)).where(*conditions)
     total = (await db.execute(count_query)).scalar() or 0
+
+    order_col = Movie.vote_average.desc().nullslast()
+    if sort_by == "release_date_desc":
+        order_col = Movie.release_date.desc().nullslast()
 
     query = (
         select(Movie)
-        .where(
-            Movie.vote_count.isnot(None),
-            Movie.vote_count >= vote_threshold,
-        )
-        .order_by(Movie.vote_average.desc().nullslast())
+        .where(*conditions)
+        .order_by(order_col)
         .limit(limit)
         .offset(offset)
     )
@@ -119,17 +138,17 @@ async def get_movie_detail(
     )
     user_rating = rating_result.scalar_one_or_none()
 
-    # Check watch history
+    # Check watch history status
     watch_result = await db.execute(
-        select(WatchHistory.id).where(
+        select(WatchHistory.status).where(
             WatchHistory.user_id == user_id,
             WatchHistory.movie_id == movie_id,
         )
     )
-    in_watch_history = watch_result.scalar_one_or_none() is not None
+    watch_status = watch_result.scalar_one_or_none()
 
     detail = MovieDetail.model_validate(movie)
     detail.user_rating = user_rating
-    detail.in_watch_history = in_watch_history
+    detail.watch_status = watch_status
 
     return {"data": detail.model_dump()}

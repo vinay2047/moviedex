@@ -14,3 +14,4 @@ class OnboardingResponse(BaseModel):
 
 class WatchHistoryCreate(BaseModel):
     movie_id: int
+    status: str = Field("watchlist", pattern="^(watchlist|watched)$")

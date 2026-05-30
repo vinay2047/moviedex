@@ -47,7 +47,7 @@ class MovieDetail(BaseModel):
     cast_top5: list[CastMember] | None = None
     trailer_key: str | None = None
     user_rating: float | None = None
-    in_watch_history: bool = False
+    watch_status: str | None = None
 
     model_config = {"from_attributes": True}
 

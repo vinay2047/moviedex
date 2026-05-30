@@ -12,8 +12,12 @@ import {
   getMovieDetail,
   getSimilarMovies,
   upsertRating,
+  deleteRating,
   addToWatchHistory,
   removeFromWatchHistory,
+  getFavoriteStatus,
+  addFavorite,
+  removeFavorite,
   tmdbImage,
   tmdbBackdrop,
 } from "@/lib/api";
@@ -30,19 +34,29 @@ export default function MovieDetailPage() {
   const [pendingRating, setPendingRating] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [isWatched, setIsWatched] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [totalFavorites, setTotalFavorites] = useState(0);
+  const [favoriteError, setFavoriteError] = useState("");
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        const [movieRes, similarRes] = await Promise.all([
+        const [movieRes, similarRes, favStatusRes] = await Promise.all([
           getMovieDetail(movieId),
           getSimilarMovies(movieId, 10),
+          getFavoriteStatus(movieId).catch(() => null),
         ]);
         setMovie(movieRes.data);
         setSimilar(similarRes.data);
-        // If the movie already has a user rating, it's been watched
-        if (movieRes.data.user_rating !== null) {
+        
+        if (favStatusRes) {
+          setIsFavorite(favStatusRes.data.is_favorite);
+          setTotalFavorites(favStatusRes.data.total_favorites);
+        }
+
+        // If the movie already has a user rating, or its watch status is "watched", it's been watched
+        if (movieRes.data.user_rating !== null || movieRes.data.watch_status === "watched") {
           setIsWatched(true);
         }
       } catch (err) {
@@ -58,15 +72,40 @@ export default function MovieDetailPage() {
   const handleToggleWatchlist = async () => {
     if (!movie) return;
     try {
-      if (movie.in_watch_history) {
+      if (movie.watch_status === "watchlist") {
         await removeFromWatchHistory(movie.id);
-        setMovie((prev) => (prev ? { ...prev, in_watch_history: false } : prev));
+        setMovie((prev) => (prev ? { ...prev, watch_status: null } : prev));
       } else {
-        await addToWatchHistory(movie.id);
-        setMovie((prev) => (prev ? { ...prev, in_watch_history: true } : prev));
+        await addToWatchHistory(movie.id, "watchlist");
+        setMovie((prev) => (prev ? { ...prev, watch_status: "watchlist" } : prev));
       }
     } catch (err) {
       console.error("Watchlist toggle failed:", err);
+    }
+  };
+
+  // Toggle Favorite
+  const handleToggleFavorite = async () => {
+    if (!movie) return;
+    setFavoriteError("");
+    try {
+      if (isFavorite) {
+        await removeFavorite(movie.id);
+        setIsFavorite(false);
+        setTotalFavorites((prev) => prev - 1);
+      } else {
+        if (totalFavorites >= 5) {
+          setFavoriteError("You already have 5 favorites. Remove one from your profile first.");
+          // Clear error after 5s
+          setTimeout(() => setFavoriteError(""), 5000);
+          return;
+        }
+        await addFavorite(movie.id);
+        setIsFavorite(true);
+        setTotalFavorites((prev) => prev + 1);
+      }
+    } catch (err) {
+      console.error("Favorite toggle failed:", err);
     }
   };
 
@@ -86,6 +125,25 @@ export default function MovieDetailPage() {
         setMovie((prev) =>
           prev ? { ...prev, user_rating: pendingRating } : prev
         );
+        // Also ensure it is in the watch history so it appears in the backend tracked lists
+        if (movie.watch_status !== "watched") {
+          await addToWatchHistory(movie.id, "watched");
+          setMovie((prev) => (prev ? { ...prev, watch_status: "watched" } : prev));
+        }
+      } else {
+        // pendingRating is null
+        if (movie.user_rating !== null) {
+          // Clearing an existing rating
+          await deleteRating(movie.id);
+          setMovie((prev) =>
+            prev ? { ...prev, user_rating: null } : prev
+          );
+        }
+        // Always mark as watched in history if they mark it as watched
+        if (movie.watch_status !== "watched") {
+          await addToWatchHistory(movie.id, "watched");
+          setMovie((prev) => (prev ? { ...prev, watch_status: "watched" } : prev));
+        }
       }
       setIsWatched(true);
       setShowRatingDialog(false);
@@ -125,7 +183,7 @@ export default function MovieDetailPage() {
   const year = movie.release_date?.split("-")[0];
   const hours = movie.runtime ? Math.floor(movie.runtime / 60) : null;
   const mins = movie.runtime ? movie.runtime % 60 : null;
-  const inWatchlist = movie.in_watch_history;
+  const inWatchlist = movie.watch_status === "watchlist";
 
   return (
     <>
@@ -209,12 +267,34 @@ export default function MovieDetailPage() {
               )}
 
               {/* ── Action Buttons ─────────────────────────────────────── */}
-              <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3 max-w-md">
+              <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3 w-full max-w-2xl">
+                {/* Watchlist — outline style */}
+                <button
+                  onClick={handleToggleWatchlist}
+                  className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-colors duration-200 ${
+                    inWatchlist
+                      ? "bg-primary-600/12 text-primary-400 border-primary-500/25 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25"
+                      : "bg-transparent text-surface-200 border-surface-600 hover:border-surface-400 hover:text-surface-100"
+                  }`}
+                  id="toggle-watchlist"
+                >
+                  {inWatchlist ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                    </svg>
+                  )}
+                  {inWatchlist ? "In Watchlist" : "Watchlist"}
+                </button>
+
+                {/* Mark Watched Button */}
                 {isWatched ? (
-                  /* Watched State: single "Watched" indicator, clickable to update rating */
                   <button
                     onClick={handleMarkAsWatchedClick}
-                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm bg-emerald-500/12 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/18 transition-colors duration-200 cursor-pointer"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-sm bg-emerald-500/12 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/18 transition-colors duration-200 cursor-pointer whitespace-nowrap"
                     title="Click to update your rating"
                     id="watched-indicator"
                   >
@@ -232,44 +312,47 @@ export default function MovieDetailPage() {
                     )}
                   </button>
                 ) : (
-                  /* Default State: two uniform-width buttons */
-                  <>
-                    {/* Watchlist — outline style */}
-                    <button
-                      onClick={handleToggleWatchlist}
-                      className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-colors duration-200 ${
-                        inWatchlist
-                          ? "bg-primary-600/12 text-primary-400 border-primary-500/25 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25"
-                          : "bg-transparent text-surface-200 border-surface-600 hover:border-surface-400 hover:text-surface-100"
-                      }`}
-                      id="toggle-watchlist"
-                    >
-                      {inWatchlist ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-                        </svg>
-                      )}
-                      {inWatchlist ? "In Watchlist" : "Watchlist"}
-                    </button>
-
-                    {/* Mark Watched — solid accent style */}
-                    <button
-                      onClick={handleMarkAsWatchedClick}
-                      className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm btn-primary transition-colors duration-200"
-                      id="mark-as-watched"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Mark Watched
-                    </button>
-                  </>
+                  <button
+                    onClick={handleMarkAsWatchedClick}
+                    className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm btn-primary transition-colors duration-200"
+                    id="mark-as-watched"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Mark Watched
+                  </button>
                 )}
+
+                {/* Favorite Button */}
+                <button
+                  onClick={handleToggleFavorite}
+                  className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-colors duration-200 whitespace-nowrap ${
+                    isFavorite
+                      ? "bg-pink-500/12 text-pink-400 border-pink-500/25 hover:bg-pink-500/18"
+                      : "bg-transparent text-surface-200 border-surface-600 hover:border-surface-400 hover:text-surface-100"
+                  }`}
+                  title={isFavorite ? "Remove from Favorites" : "Mark as Favorite"}
+                >
+                  {isFavorite ? (
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                    </svg>
+                  )}
+                  {isFavorite ? "Favorited" : "Favorite"}
+                </button>
               </div>
+              
+              {/* Error Toast for Favorites */}
+              {favoriteError && (
+                <div className="mt-3 text-sm text-pink-400 animate-fade-in-up">
+                  {favoriteError}
+                </div>
+              )}
 
               {/* Trailer link — subtle, below action buttons */}
               {movie.trailer_key && (

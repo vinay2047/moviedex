@@ -41,7 +41,7 @@ def create_app() -> FastAPI:
     )
 
     # ── Routers ───────────────────────────────────────────────────────────
-    from app.routers import health, users, movies, recommendations, ratings, watch_history, onboarding
+    from app.routers import health, users, movies, recommendations, ratings, watch_history, onboarding, favorites, profile
 
     app.include_router(health.router)
     app.include_router(users.router)
@@ -50,6 +50,8 @@ def create_app() -> FastAPI:
     app.include_router(ratings.router)
     app.include_router(watch_history.router)
     app.include_router(onboarding.router)
+    app.include_router(favorites.router)
+    app.include_router(profile.router)
 
     return app
 

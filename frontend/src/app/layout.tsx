@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   description:
     "Discover your next favorite movie with intelligent, personalized recommendations. MovieDex learns your unique taste to surface films you'll genuinely love.",
   keywords: ["movies", "recommendations", "personalized", "discover", "cinema"],
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

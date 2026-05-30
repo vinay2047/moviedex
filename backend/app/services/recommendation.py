@@ -22,11 +22,18 @@ def _sigmoid(x: float, temperature: float = 10.0) -> float:
     return 1.0 / (1.0 + math.exp(-x / temperature))
 
 
+from sqlalchemy import extract
+
 async def get_personalized_recommendations(
     db: AsyncSession,
     user_id: uuid.UUID,
     limit: int = 20,
     offset: int = 0,
+    genre_id: int | None = None,
+    min_year: int | None = None,
+    max_year: int | None = None,
+    min_rating: float | None = None,
+    sort_by: str | None = None,
 ) -> tuple[list[dict], int]:
     """
     Retrieve top-K personalized recommendations for a user via pgvector.
@@ -49,8 +56,28 @@ async def get_personalized_recommendations(
     rated_subq = select(Rating.movie_id).where(Rating.user_id == user_id)
     watched_subq = select(WatchHistory.movie_id).where(WatchHistory.user_id == user_id)
 
-    # 3. pgvector ANN query with inner product
-    #    <#> returns negative inner product, so ORDER BY ASC gives highest similarity first
+    # 3. Base conditions
+    conditions = [
+        Movie.id.notin_(rated_subq),
+        Movie.id.notin_(watched_subq),
+    ]
+
+    if genre_id is not None:
+        conditions.append(Movie.genres.contains([{"id": genre_id}]))
+    if min_year is not None:
+        conditions.append(extract('year', Movie.release_date) >= min_year)
+    if max_year is not None:
+        conditions.append(extract('year', Movie.release_date) <= max_year)
+    if min_rating is not None:
+        conditions.append(Movie.vote_average >= min_rating)
+
+    # 4. If sort_by is provided, we fetch a larger candidate pool (e.g. 100), sort them in Python
+    fetch_limit = limit
+    if sort_by:
+        fetch_limit = 100
+        offset = 0  # Re-sorting requires fetching the top 100 from offset 0
+
+    # 5. pgvector ANN query with inner product
     query = (
         select(
             Movie.id,
@@ -61,12 +88,9 @@ async def get_personalized_recommendations(
             Movie.release_date,
             (Movie.embedding.max_inner_product(user_emb)).label("neg_score"),
         )
-        .where(
-            Movie.id.notin_(rated_subq),
-            Movie.id.notin_(watched_subq),
-        )
+        .where(*conditions)
         .order_by(text("neg_score ASC"))
-        .limit(limit)
+        .limit(fetch_limit)
         .offset(offset)
     )
 
@@ -85,6 +109,14 @@ async def get_personalized_recommendations(
             "release_date": row.release_date,
             "score": round(_sigmoid(dot_product), 4),
         })
+
+    if sort_by == "release_date_desc":
+        recommendations.sort(key=lambda x: str(x["release_date"] or ""), reverse=True)
+    elif sort_by == "vote_average_desc":
+        recommendations.sort(key=lambda x: x["vote_average"] or 0.0, reverse=True)
+
+    if sort_by:
+        recommendations = recommendations[:limit]
 
     return recommendations, len(recommendations)
 

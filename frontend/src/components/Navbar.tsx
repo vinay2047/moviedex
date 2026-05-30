@@ -119,9 +119,9 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-7 h-7 rounded-md bg-primary-600 flex items-center justify-center text-white font-semibold text-xs tracking-tight">
-              M
-            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-primary-600" viewBox="0 0 48 48">
+              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M38.993 9.009c-7.815 0-6.885 33.491-19.457 33.491S1.829 5.5 9.169 5.5s13.078 22.966 23.285 22.966S44.894 9.01 38.994 9.01Z"/>
+            </svg>
             <span className="text-base font-semibold text-surface-100 tracking-tight">
               MovieDex
             </span>
@@ -224,16 +224,16 @@ export default function Navbar() {
                         Profile
                       </Link>
 
-                      {/* Watchlist */}
+                      {/* Library */}
                       <Link
-                        href="/profile?tab=history"
+                        href="/library"
                         onClick={() => setDropdownOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-surface-300 hover:text-surface-100 hover:bg-surface-800/60 transition-colors"
                       >
                         <svg className="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
                         </svg>
-                        Watchlist
+                        Library
                       </Link>
 
                       {/* Settings */}

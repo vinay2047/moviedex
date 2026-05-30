@@ -39,7 +39,7 @@ export default function MovieCard({
       onClick={onSelect ? handleClick : undefined}
     >
       {/* Poster */}
-      <div className="aspect-[2/3] relative bg-surface-800">
+      <div className="aspect-[2/3] relative bg-surface-800 overflow-hidden">
         {movie.poster_path ? (
           <Image
             src={posterSrc}
@@ -57,7 +57,7 @@ export default function MovieCard({
         )}
 
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-surface-950/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         {/* Score badge */}
         {showScore && score !== undefined && (

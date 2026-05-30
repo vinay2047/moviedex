@@ -15,6 +15,11 @@ async def personalized_recommendations(
     user_id: AuthUserId,
     limit: int = Query(20, ge=1, le=50),
     offset: int = Query(0, ge=0),
+    genre_id: int | None = Query(None, description="Filter by genre ID"),
+    min_year: int | None = Query(None, description="Filter by min release year"),
+    max_year: int | None = Query(None, description="Filter by max release year"),
+    min_rating: float | None = Query(None, description="Filter by minimum rating"),
+    sort_by: str | None = Query(None, description="Sort order: vote_average_desc, release_date_desc")
 ) -> dict:
     """Get personalized top-K movie recommendations for the authenticated user."""
     # Check onboarding status
@@ -26,7 +31,7 @@ async def personalized_recommendations(
         )
 
     recommendations, total = await get_personalized_recommendations(
-        db, user_id, limit, offset
+        db, user_id, limit, offset, genre_id, min_year, max_year, min_rating, sort_by
     )
 
     return {

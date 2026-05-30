@@ -31,6 +31,7 @@ class User(Base):
     ratings: Mapped[list["Rating"]] = relationship(back_populates="user")  # type: ignore[name-defined]  # noqa: F821
     watch_history_entries: Mapped[list["WatchHistory"]] = relationship(back_populates="user")  # type: ignore[name-defined]  # noqa: F821
     onboarding_selections: Mapped[list["OnboardingSelection"]] = relationship(back_populates="user")  # type: ignore[name-defined]  # noqa: F821
+    favorites: Mapped[list["Favorite"]] = relationship(back_populates="user")  # type: ignore[name-defined]  # noqa: F821
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, onboarding_completed={self.onboarding_completed})>"

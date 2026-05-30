@@ -6,24 +6,53 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import MovieCard from "@/components/MovieCard";
+import YearRangeSlider from "@/components/YearRangeSlider";
+import SelectDropdown from "@/components/SelectDropdown";
 import {
   getRecommendations,
   searchMovies,
   getPopularMovies,
   getMe,
+  getGenres,
+  type DiscoverParams,
 } from "@/lib/api";
 import type { MovieSummary, MovieRecommendation } from "@/types";
 
 export default function DiscoverPage() {
   const router = useRouter();
+  
+  // Data states
   const [recommendations, setRecommendations] = useState<MovieRecommendation[]>([]);
-  const [searchResults, setSearchResults] = useState<MovieSummary[]>([]);
   const [popular, setPopular] = useState<MovieSummary[]>([]);
+  const [searchResults, setSearchResults] = useState<MovieSummary[]>([]);
+  
+  // UI states
   const [query, setQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"forYou" | "popular">("forYou");
+  const [genres, setGenres] = useState<{ id: number; name: string }[]>([]);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
+  // Filter States
+  const currentYear = new Date().getFullYear();
+  const defaultParams: DiscoverParams = {
+    genre_id: null,
+    min_year: 1920,
+    max_year: currentYear,
+    min_rating: null,
+    sort_by: null,
+  };
+
+  // Draft states (what's in the modal right now)
+  const [draftForYou, setDraftForYou] = useState<DiscoverParams>(defaultParams);
+  const [draftPopular, setDraftPopular] = useState<DiscoverParams>(defaultParams);
+
+  // Applied states (what's actually used to fetch data)
+  const [appliedForYou, setAppliedForYou] = useState<DiscoverParams>(defaultParams);
+  const [appliedPopular, setAppliedPopular] = useState<DiscoverParams>(defaultParams);
+
+  // Initial load for genres and auth
   useEffect(() => {
     const init = async () => {
       try {
@@ -32,21 +61,46 @@ export default function DiscoverPage() {
           router.push("/onboarding");
           return;
         }
-
-        const [recRes, popRes] = await Promise.all([
-          getRecommendations(20),
-          getPopularMovies(20),
-        ]);
-        setRecommendations(recRes.data);
-        setPopular(popRes.data);
+        const genreRes = await getGenres();
+        setGenres(genreRes.data);
       } catch (err) {
-        console.error("Failed to load:", err);
-      } finally {
-        setLoading(false);
+        console.error("Failed to load initial data:", err);
       }
     };
     init();
   }, [router]);
+
+  // Fetch For You data when appliedForYou changes
+  useEffect(() => {
+    const fetchForYou = async () => {
+      setLoading(true);
+      try {
+        const res = await getRecommendations({ limit: 20, ...appliedForYou });
+        setRecommendations(res.data);
+      } catch (err) {
+        console.error("Failed to fetch recommendations:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchForYou();
+  }, [appliedForYou]);
+
+  // Fetch Popular data when appliedPopular changes
+  useEffect(() => {
+    const fetchPopular = async () => {
+      setLoading(true);
+      try {
+        const res = await getPopularMovies({ limit: 20, ...appliedPopular });
+        setPopular(res.data);
+      } catch (err) {
+        console.error("Failed to fetch popular:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPopular();
+  }, [appliedPopular]);
 
   // Debounced search
   const handleSearch = useCallback(async (q: string) => {
@@ -76,25 +130,58 @@ export default function DiscoverPage() {
     ? recommendations
     : popular;
 
+  // Helpers for current tab state
+  const currentDraft = activeTab === "forYou" ? draftForYou : draftPopular;
+  const setCurrentDraft = activeTab === "forYou" ? setDraftForYou : setDraftPopular;
+  const currentApplied = activeTab === "forYou" ? appliedForYou : appliedPopular;
+
+  // Open modal and sync draft to applied
+  const handleOpenFilters = () => {
+    if (activeTab === "forYou") {
+      setDraftForYou(appliedForYou);
+    } else {
+      setDraftPopular(appliedPopular);
+    }
+    setIsFilterModalOpen(true);
+  };
+
+  // Apply filters
+  const handleApplyFilters = () => {
+    if (activeTab === "forYou") {
+      setAppliedForYou(draftForYou);
+    } else {
+      setAppliedPopular(draftPopular);
+    }
+    setIsFilterModalOpen(false);
+  };
+
+  // Clear filters
+  const handleClearFilters = () => {
+    setCurrentDraft(defaultParams);
+  };
+
+  // Count active filters (based on applied state so the badge is accurate)
+  const activeFiltersCount = Object.entries(currentApplied).filter(([key, val]) => {
+    if (key === 'min_year' && val === 1920) return false;
+    if (key === 'max_year' && val === currentYear) return false;
+    return val !== null;
+  }).length;
+
+  const hasDraftFilters = Object.entries(currentDraft).filter(([key, val]) => {
+    if (key === 'min_year' && val === 1920) return false;
+    if (key === 'max_year' && val === currentYear) return false;
+    return val !== null;
+  }).length > 0;
+
   return (
     <>
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
         {/* Search */}
         <div className="max-w-2xl mx-auto mb-10">
           <div className="relative">
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               id="discover-search"
@@ -105,10 +192,7 @@ export default function DiscoverPage() {
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-800 border border-surface-600 text-surface-100 placeholder-surface-500 text-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all"
             />
             {query && (
-              <button
-                onClick={() => setQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-200"
-              >
+              <button onClick={() => setQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-200">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -117,30 +201,41 @@ export default function DiscoverPage() {
           </div>
         </div>
 
-        {/* Tabs (only when not searching) */}
+        {/* Tabs & Filter Button (only when not searching) */}
         {query.length < 2 && (
-          <div className="flex items-center gap-1 mb-8 glass-light rounded-xl p-1 w-fit mx-auto">
+          <div className="mb-10 flex items-center justify-center gap-4">
+            <div className="flex items-center gap-1 glass-light rounded-xl p-1 w-fit">
+              <button
+                onClick={() => setActiveTab("forYou")}
+                className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === "forYou" ? "bg-primary-600 text-white shadow-lg" : "text-surface-400 hover:text-surface-100"
+                }`}
+              >
+                For You
+              </button>
+              <button
+                onClick={() => setActiveTab("popular")}
+                className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === "popular" ? "bg-primary-600 text-white shadow-lg" : "text-surface-400 hover:text-surface-100"
+                }`}
+              >
+                Popular
+              </button>
+            </div>
+            
             <button
-              onClick={() => setActiveTab("forYou")}
-              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === "forYou"
-                  ? "bg-primary-600 text-white shadow-lg"
-                  : "text-surface-400 hover:text-surface-100"
-              }`}
-              id="tab-for-you"
+              onClick={handleOpenFilters}
+              className="bg-surface-800 hover:bg-surface-700 border border-surface-600 text-surface-200 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
             >
-              For You
-            </button>
-            <button
-              onClick={() => setActiveTab("popular")}
-              className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === "popular"
-                  ? "bg-primary-600 text-white shadow-lg"
-                  : "text-surface-400 hover:text-surface-100"
-              }`}
-              id="tab-popular"
-            >
-              Popular
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filters
+              {activeFiltersCount > 0 && (
+                <span className="bg-primary-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-1">
+                  {activeFiltersCount}
+                </span>
+              )}
             </button>
           </div>
         )}
@@ -171,7 +266,7 @@ export default function DiscoverPage() {
             <p className="text-surface-400 text-lg">
               {query.length >= 2
                 ? "No movies found. Try a different search."
-                : "No recommendations yet."}
+                : "No movies found with the selected filters."}
             </p>
           </div>
         ) : (
@@ -187,6 +282,112 @@ export default function DiscoverPage() {
           </div>
         )}
       </main>
+
+      {/* Filter Modal */}
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-900 border border-surface-700 rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex-none flex items-center justify-between p-4 sm:p-6 border-b border-surface-800">
+              <h3 className="text-xl font-display font-semibold text-white">Filters</h3>
+              <button
+                onClick={() => setIsFilterModalOpen(false)}
+                className="text-surface-400 hover:text-white transition-colors p-2 -mr-2 rounded-full hover:bg-surface-800"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* Genre Filter */}
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-2">Genre</label>
+                <SelectDropdown
+                  value={currentDraft.genre_id}
+                  onChange={(val) => setCurrentDraft({ ...currentDraft, genre_id: val ? Number(val) : null })}
+                  options={[
+                    { value: "", label: "All Genres" },
+                    ...genres.map(g => ({ value: g.id, label: g.name }))
+                  ]}
+                />
+              </div>
+
+              {/* Rating Filter */}
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-2">Minimum Rating</label>
+                <SelectDropdown
+                  value={currentDraft.min_rating}
+                  onChange={(val) => setCurrentDraft({ ...currentDraft, min_rating: val ? Number(val) : null })}
+                  options={[
+                    { value: "", label: "Any Rating" },
+                    { value: "5", label: "5+ Stars" },
+                    { value: "6", label: "6+ Stars" },
+                    { value: "7", label: "7+ Stars" },
+                    { value: "8", label: "8+ Stars" },
+                    { value: "9", label: "9+ Stars" },
+                  ]}
+                />
+              </div>
+
+              {/* Sort Order */}
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-2">Sort By</label>
+                <SelectDropdown
+                  value={currentDraft.sort_by}
+                  onChange={(val) => setCurrentDraft({ ...currentDraft, sort_by: val ? String(val) : null })}
+                  options={[
+                    { value: "", label: activeTab === "forYou" ? "Best Match" : "Most Popular" },
+                    { value: "release_date_desc", label: "Newest Releases" },
+                    { value: "vote_average_desc", label: "Highest Rated" },
+                  ]}
+                />
+              </div>
+
+              {/* Year Range */}
+              <div>
+                <label className="block text-sm font-medium text-surface-300 mb-1">Release Year Range</label>
+                <YearRangeSlider
+                  min={1920}
+                  max={currentYear}
+                  value={[currentDraft.min_year || 1920, currentDraft.max_year || currentYear]}
+                  onChange={([min, max]) => setCurrentDraft({ ...currentDraft, min_year: min, max_year: max })}
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex-none p-4 sm:p-6 border-t border-surface-800 flex justify-between items-center bg-surface-800/50">
+              {hasDraftFilters ? (
+                <button
+                  onClick={handleClearFilters}
+                  className="text-surface-400 hover:text-white text-sm font-medium transition-colors"
+                >
+                  Clear Filters
+                </button>
+              ) : (
+                <div /> /* Spacer */
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsFilterModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl text-surface-300 hover:text-white font-medium transition-colors hover:bg-surface-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApplyFilters}
+                  className="bg-primary-600 hover:bg-primary-500 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-lg shadow-primary-500/20"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

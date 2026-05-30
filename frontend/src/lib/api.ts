@@ -83,10 +83,14 @@ import type {
   PaginatedResponse,
   SingleResponse,
   GenreItem,
+  ProfileStats,
+  FavoriteMovie,
 } from "@/types";
 
 // Users
 export const getMe = () => api<SingleResponse<UserProfile>>("/api/v1/users/me");
+
+export const getProfileStats = () => api<SingleResponse<ProfileStats>>("/api/v1/profile/stats");
 
 // Movies
 export const searchMovies = (q: string, limit = 10, offset = 0) =>
@@ -94,11 +98,26 @@ export const searchMovies = (q: string, limit = 10, offset = 0) =>
     params: { q, limit, offset },
   });
 
-export const getPopularMovies = (limit = 20, offset = 0) =>
-  api<PaginatedResponse<MovieSummary>>("/api/v1/movies/popular", {
-    params: { limit, offset },
+export interface DiscoverParams {
+  limit?: number;
+  offset?: number;
+  genre_id?: number | null;
+  min_year?: number | null;
+  max_year?: number | null;
+  min_rating?: number | null;
+  sort_by?: string | null;
+}
+
+export const getPopularMovies = (params: DiscoverParams = { limit: 20, offset: 0 }) => {
+  // Filter out null/undefined
+  const queryParams = Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v != null)
+  );
+  return api<PaginatedResponse<MovieSummary>>("/api/v1/movies/popular", {
+    params: queryParams as Record<string, string | number>,
     auth: false,
   });
+};
 
 export const getMovieDetail = (id: number) =>
   api<SingleResponse<MovieDetail>>(`/api/v1/movies/${id}`);
@@ -107,10 +126,15 @@ export const getGenres = () =>
   api<{ data: GenreItem[] }>("/api/v1/movies/genres", { auth: false });
 
 // Recommendations
-export const getRecommendations = (limit = 20, offset = 0) =>
-  api<PaginatedResponse<MovieRecommendation>>("/api/v1/recommendations", {
-    params: { limit, offset },
+export const getRecommendations = (params: DiscoverParams = { limit: 20, offset: 0 }) => {
+  // Filter out null/undefined
+  const queryParams = Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v != null)
+  );
+  return api<PaginatedResponse<MovieRecommendation>>("/api/v1/recommendations", {
+    params: queryParams as Record<string, string | number>,
   });
+};
 
 export const getSimilarMovies = (movieId: number, limit = 10) =>
   api<{ data: MovieRecommendation[] }>(
@@ -144,19 +168,35 @@ export const deleteRating = (movieId: number) =>
   api<void>(`/api/v1/ratings/${movieId}`, { method: "DELETE" });
 
 // Watch History
-export const getWatchHistory = (limit = 50, offset = 0) =>
+export const getWatchHistory = (limit = 50, offset = 0, status?: string) =>
   api<PaginatedResponse<MovieSummary>>("/api/v1/watch-history", {
-    params: { limit, offset },
+    params: { limit, offset, ...(status ? { status } : {}) },
   });
 
-export const addToWatchHistory = (movieId: number) =>
+export const addToWatchHistory = (movieId: number, status: "watchlist" | "watched" = "watchlist") =>
   api<SingleResponse<{ movie_id: number; status: string }>>(
     "/api/v1/watch-history",
-    { method: "POST", body: { movie_id: movieId } }
+    { method: "POST", body: { movie_id: movieId, status } }
   );
 
 export const removeFromWatchHistory = (movieId: number) =>
   api<void>(`/api/v1/watch-history/${movieId}`, { method: "DELETE" });
+
+// Favorites
+export const getFavorites = () =>
+  api<{ data: FavoriteMovie[] }>("/api/v1/favorites");
+
+export const addFavorite = (movieId: number) =>
+  api<SingleResponse<{ movie_id: number; position: number; created_at: string }>>(
+    "/api/v1/favorites",
+    { method: "POST", body: { movie_id: movieId } }
+  );
+
+export const removeFavorite = (movieId: number) =>
+  api<void>(`/api/v1/favorites/${movieId}`, { method: "DELETE" });
+
+export const getFavoriteStatus = (movieId: number) =>
+  api<SingleResponse<{ is_favorite: boolean; total_favorites: number }>>(`/api/v1/favorites/${movieId}/status`);
 
 // TMDB image helpers
 export const tmdbImage = (path: string | null, size = "w500"): string => {

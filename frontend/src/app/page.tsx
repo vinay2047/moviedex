@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { BackgroundRippleEffect } from "@/components/ui/background-ripple-effect";
 
 export default function LandingPage() {
   return (
@@ -7,8 +8,11 @@ export default function LandingPage() {
       <Navbar />
       <main className="relative">
         {/* ── Hero ────────────────────────────────────────────────────── */}
-        <section className="hero-gradient min-h-[85vh] flex items-center">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <section className="hero-gradient relative min-h-[85vh] flex items-center overflow-hidden">
+          <div className="absolute inset-0 z-0">
+            <BackgroundRippleEffect />
+          </div>
+          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full pointer-events-none">
             <div className="max-w-2xl animate-fade-in-up">
               <p className="text-sm font-medium text-primary-400 tracking-wide uppercase mb-6">
                 Personalized recommendations
@@ -25,7 +29,7 @@ export default function LandingPage() {
                 everyone else is watching.
               </p>
 
-              <div className="mt-10 flex flex-wrap items-center gap-4">
+              <div className="mt-10 flex flex-wrap items-center gap-4 pointer-events-auto">
                 <Link
                   href="/signup"
                   className="btn-primary text-base !py-3 !px-7"

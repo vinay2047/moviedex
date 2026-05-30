@@ -31,7 +31,7 @@ export interface MovieDetail extends MovieSummary {
   cast_top5: CastMember[] | null;
   trailer_key: string | null;
   user_rating: number | null;
-  in_watch_history: boolean;
+  watch_status: string | null;
 }
 
 export interface MovieRecommendation extends MovieSummary {
@@ -66,4 +66,29 @@ export interface PaginatedResponse<T> {
 
 export interface SingleResponse<T> {
   data: T;
+}
+
+export interface RatingBucket {
+  rating: number;
+  count: number;
+}
+
+export interface TopGenre {
+  genre: string;
+  avg_rating: number;
+  count: number;
+}
+
+export interface ProfileStats {
+  total_watched: number;
+  average_rating: number;
+  rating_distribution: RatingBucket[];
+  top_genres: TopGenre[];
+}
+
+export interface FavoriteMovie {
+  movie_id: number;
+  position: number;
+  title: string;
+  poster_path: string | null;
 }

@@ -17,21 +17,26 @@ router = APIRouter(prefix="/api/v1/watch-history", tags=["watch-history"])
 async def get_watch_history(
     db: DbSession,
     user_id: AuthUserId,
+    status_filter: str | None = Query(None, alias="status"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ) -> dict:
     """Get the authenticated user's watch history, most recent first."""
     count_q = select(func.count(WatchHistory.id)).where(WatchHistory.user_id == user_id)
+    if status_filter:
+        count_q = count_q.where(WatchHistory.status == status_filter)
     total = (await db.execute(count_q)).scalar() or 0
 
     query = (
         select(Movie)
         .join(WatchHistory, WatchHistory.movie_id == Movie.id)
         .where(WatchHistory.user_id == user_id)
-        .order_by(WatchHistory.watched_at.desc())
-        .limit(limit)
-        .offset(offset)
     )
+    if status_filter:
+        query = query.where(WatchHistory.status == status_filter)
+        
+    query = query.order_by(WatchHistory.watched_at.desc()).limit(limit).offset(offset)
+    
     result = await db.execute(query)
     movies = result.scalars().all()
 
@@ -58,15 +63,16 @@ async def add_to_watch_history(
     stmt = pg_insert(WatchHistory).values(
         user_id=user_id,
         movie_id=body.movie_id,
+        status=body.status,
     )
     stmt = stmt.on_conflict_do_update(
         constraint="uq_watch_history_user_movie",
-        set_={"watched_at": func.now()},
+        set_={"watched_at": func.now(), "status": body.status},
     )
     await db.execute(stmt)
     await db.commit()
 
-    return {"data": {"movie_id": body.movie_id, "status": "added"}}
+    return {"data": {"movie_id": body.movie_id, "status": body.status}}
 
 
 @router.delete("/{movie_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -61,9 +61,9 @@ export default function SignupPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-lg">
-              M
-            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-primary-600" viewBox="0 0 48 48">
+              <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M38.993 9.009c-7.815 0-6.885 33.491-19.457 33.491S1.829 5.5 9.169 5.5s13.078 22.966 23.285 22.966S44.894 9.01 38.994 9.01Z"/>
+            </svg>
             <span className="text-2xl font-display font-bold gradient-text">
               MovieDex
             </span>

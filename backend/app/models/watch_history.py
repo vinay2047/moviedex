@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, UniqueConstraint, func
+from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,6 +27,7 @@ class WatchHistory(Base):
         index=True,
     )
     watched_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    status: Mapped[str] = mapped_column(String(20), server_default="watchlist", nullable=False)
 
     # ── Relationships ─────────────────────────────────────────────────────
     user: Mapped["User"] = relationship(back_populates="watch_history_entries")  # type: ignore[name-defined]  # noqa: F821

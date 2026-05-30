@@ -78,7 +78,7 @@ export default function StarRating({
           </button>
         );
       })}
-      {value !== null && (
+      {typeof value === 'number' && (
         <span className="ml-1.5 text-sm font-medium text-surface-300">
           {value.toFixed(1)}
         </span>

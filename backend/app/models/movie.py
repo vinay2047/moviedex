@@ -46,6 +46,7 @@ class Movie(Base):
     # ── Relationships ─────────────────────────────────────────────────────
     ratings: Mapped[list["Rating"]] = relationship(back_populates="movie")  # type: ignore[name-defined]  # noqa: F821
     watch_history_entries: Mapped[list["WatchHistory"]] = relationship(back_populates="movie")  # type: ignore[name-defined]  # noqa: F821
+    favorites: Mapped[list["Favorite"]] = relationship(back_populates="movie")  # type: ignore[name-defined]  # noqa: F821
 
     __table_args__ = (
         Index(
