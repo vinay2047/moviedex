@@ -218,7 +218,7 @@ function ProfileContent() {
           onClick={() => setActiveTab("watchlist")}
           className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
             activeTab === "watchlist"
-              ? "bg-primary-600 text-white shadow-lg"
+              ? "bg-primary-500 text-white shadow-lg"
               : "text-surface-400 hover:text-surface-100"
           }`}
           id="tab-watchlist"
@@ -230,7 +230,7 @@ function ProfileContent() {
           onClick={() => setActiveTab("watched")}
           className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
             activeTab === "watched"
-              ? "bg-primary-600 text-white shadow-lg"
+              ? "bg-primary-500 text-white shadow-lg"
               : "text-surface-400 hover:text-surface-100"
           }`}
           id="tab-watched"

@@ -62,7 +62,7 @@ export default function SelectDropdown({ value, onChange, options, placeholder =
                 }}
                 className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex justify-between items-center ${
                   isSelected 
-                    ? "bg-primary-500/10 text-primary-400 font-medium" 
+                    ? "bg-primary-500/10 text-primary-500 font-medium" 
                     : "text-surface-200 hover:bg-surface-700"
                 }`}
               >

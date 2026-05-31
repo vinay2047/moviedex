@@ -61,7 +61,7 @@ export default function MovieCard({
 
         {/* Score badge */}
         {showScore && score !== undefined && (
-          <div className="absolute top-2 right-2 bg-primary-600/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-lg">
+          <div className="absolute top-2 right-2 bg-primary-500/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-lg">
             {(score * 100).toFixed(0)}% match
           </div>
         )}

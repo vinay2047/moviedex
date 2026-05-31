@@ -158,7 +158,7 @@ function LoginForm() {
         Don&apos;t have an account?{" "}
         <Link
           href="/signup"
-          className="text-primary-400 hover:text-primary-300 font-medium"
+          className="text-primary-500 hover:text-primary-400 font-medium"
         >
           Create one
         </Link>
@@ -174,10 +174,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-primary-600" viewBox="0 0 48 48">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-primary-500" viewBox="0 0 48 48">
               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M38.993 9.009c-7.815 0-6.885 33.491-19.457 33.491S1.829 5.5 9.169 5.5s13.078 22.966 23.285 22.966S44.894 9.01 38.994 9.01Z"/>
             </svg>
-            <span className="text-2xl font-display font-bold gradient-text">
+            <span className="text-2xl font-display font-bold text-white">
               MovieDex
             </span>
           </Link>

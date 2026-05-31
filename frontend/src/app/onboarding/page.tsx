@@ -93,7 +93,7 @@ export default function OnboardingPage() {
             <span className="text-sm text-surface-400">
               {selected.size} / 5 selected
               {selected.size < 3 && (
-                <span className="text-primary-400 ml-1">
+                <span className="text-primary-500 ml-1">
                   (min 3)
                 </span>
               )}

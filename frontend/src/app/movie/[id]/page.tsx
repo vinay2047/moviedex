@@ -71,16 +71,22 @@ export default function MovieDetailPage() {
   // Toggle watchlist (simple add/remove, no dialog)
   const handleToggleWatchlist = async () => {
     if (!movie) return;
+    const previousStatus = movie.watch_status;
+    const isAdding = previousStatus !== "watchlist";
+    
+    // Optimistic update
+    setMovie((prev) => (prev ? { ...prev, watch_status: isAdding ? "watchlist" : null } : prev));
+    
     try {
-      if (movie.watch_status === "watchlist") {
-        await removeFromWatchHistory(movie.id);
-        setMovie((prev) => (prev ? { ...prev, watch_status: null } : prev));
-      } else {
+      if (isAdding) {
         await addToWatchHistory(movie.id, "watchlist");
-        setMovie((prev) => (prev ? { ...prev, watch_status: "watchlist" } : prev));
+      } else {
+        await removeFromWatchHistory(movie.id);
       }
     } catch (err) {
       console.error("Watchlist toggle failed:", err);
+      // Revert on error
+      setMovie((prev) => (prev ? { ...prev, watch_status: previousStatus } : prev));
     }
   };
 
@@ -88,24 +94,31 @@ export default function MovieDetailPage() {
   const handleToggleFavorite = async () => {
     if (!movie) return;
     setFavoriteError("");
+    
+    const wasFavorite = isFavorite;
+    const previousTotal = totalFavorites;
+    
+    if (!wasFavorite && totalFavorites >= 5) {
+      setFavoriteError("You already have 5 favorites. Remove one from your profile first.");
+      setTimeout(() => setFavoriteError(""), 5000);
+      return;
+    }
+
+    // Optimistic update
+    setIsFavorite(!wasFavorite);
+    setTotalFavorites((prev) => (wasFavorite ? prev - 1 : prev + 1));
+
     try {
-      if (isFavorite) {
+      if (wasFavorite) {
         await removeFavorite(movie.id);
-        setIsFavorite(false);
-        setTotalFavorites((prev) => prev - 1);
       } else {
-        if (totalFavorites >= 5) {
-          setFavoriteError("You already have 5 favorites. Remove one from your profile first.");
-          // Clear error after 5s
-          setTimeout(() => setFavoriteError(""), 5000);
-          return;
-        }
         await addFavorite(movie.id);
-        setIsFavorite(true);
-        setTotalFavorites((prev) => prev + 1);
       }
     } catch (err) {
       console.error("Favorite toggle failed:", err);
+      // Revert on error
+      setIsFavorite(wasFavorite);
+      setTotalFavorites(previousTotal);
     }
   };
 
@@ -273,7 +286,7 @@ export default function MovieDetailPage() {
                   onClick={handleToggleWatchlist}
                   className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-colors duration-200 ${
                     inWatchlist
-                      ? "bg-primary-600/12 text-primary-400 border-primary-500/25 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25"
+                      ? "bg-primary-500/10 text-primary-500 border-primary-500/20 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25"
                       : "bg-transparent text-surface-200 border-surface-600 hover:border-surface-400 hover:text-surface-100"
                   }`}
                   id="toggle-watchlist"

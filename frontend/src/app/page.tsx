@@ -1,8 +1,33 @@
+"use client";
+
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { BackgroundRippleEffect } from "@/components/ui/background-ripple-effect";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 export default function LandingPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+      setIsCheckingAuth(false);
+    };
+    getUser();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsCheckingAuth(false);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -14,7 +39,7 @@ export default function LandingPage() {
           </div>
           <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 w-full pointer-events-none">
             <div className="max-w-2xl animate-fade-in-up">
-              <p className="text-sm font-medium text-primary-400 tracking-wide uppercase mb-6">
+              <p className="text-sm font-medium text-primary-500 tracking-wide uppercase mb-6">
                 Personalized recommendations
               </p>
 
@@ -29,21 +54,34 @@ export default function LandingPage() {
                 everyone else is watching.
               </p>
 
-              <div className="mt-10 flex flex-wrap items-center gap-4 pointer-events-auto">
-                <Link
-                  href="/signup"
-                  className="btn-primary text-base !py-3 !px-7"
-                  id="hero-cta-signup"
-                >
-                  Get Started Free
-                </Link>
-                <Link
-                  href="/login"
-                  className="btn-secondary text-base !py-3 !px-7"
-                  id="hero-cta-login"
-                >
-                  Sign In
-                </Link>
+              <div className="mt-10 flex flex-wrap items-center gap-4 pointer-events-auto h-[52px]">
+                {isCheckingAuth ? (
+                   <div className="w-48 h-[52px] skeleton"></div>
+                ) : user ? (
+                  <Link
+                    href="/discover"
+                    className="btn-primary text-base !py-3 w-48 text-center flex justify-center items-center"
+                  >
+                    Explore Movies
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/signup"
+                      className="btn-primary text-base !py-3 w-48 text-center flex justify-center items-center"
+                      id="hero-cta-signup"
+                    >
+                      Get Started Free
+                    </Link>
+                    <Link
+                      href="/login"
+                      className="btn-secondary text-base !py-3 w-48 text-center flex justify-center items-center"
+                      id="hero-cta-login"
+                    >
+                      Sign In
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -56,7 +94,7 @@ export default function LandingPage() {
         <section className="py-24 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
             <div className="text-center max-w-xl mx-auto mb-16 animate-fade-in-up-delay-1">
-              <p className="text-sm font-medium text-primary-400 tracking-wide uppercase mb-3">
+              <p className="text-sm font-medium text-primary-500 tracking-wide uppercase mb-3">
                 How it works
               </p>
               <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-surface-100">
@@ -101,7 +139,7 @@ export default function LandingPage() {
                   key={item.step}
                   className={`feature-card group animate-fade-in-up-delay-${i + 1}`}
                 >
-                  <div className="w-10 h-10 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-center text-primary-400 mb-5 group-hover:border-primary-600/30 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-center text-primary-500 mb-5 group-hover:border-primary-500/20 transition-colors">
                     {item.icon}
                   </div>
                   <div className="text-xs font-medium text-surface-500 tracking-widest uppercase mb-2">
@@ -127,7 +165,7 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div className="animate-fade-in-up-delay-1">
-                <p className="text-sm font-medium text-primary-400 tracking-wide uppercase mb-3">
+                <p className="text-sm font-medium text-primary-500 tracking-wide uppercase mb-3">
                   Beyond popularity
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-surface-100 mb-6">
@@ -146,8 +184,8 @@ export default function LandingPage() {
                     "Surfaces hidden gems beyond the mainstream",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-3">
-                      <div className="w-5 h-5 rounded-full bg-primary-600/15 border border-primary-600/25 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <svg className="w-3 h-3 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <div className="w-5 h-5 rounded-full bg-primary-500/15 border border-primary-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-3 h-3 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                         </svg>
                       </div>

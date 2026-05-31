@@ -29,7 +29,7 @@ export const BackgroundRippleEffect = ({
       <div className="relative h-auto w-auto overflow-hidden">
         <div className="pointer-events-none absolute inset-0 z-[2] h-full w-full overflow-hidden" />
         <DivGrid
-          className="mask-radial-from-20% mask-radial-at-top opacity-60"
+          className="[mask-image:radial-gradient(ellipse_100%_90%_at_50%_20%,black_40%,transparent_100%)] dark:opacity-50 opacity-20"
           rows={rows}
           cols={cols}
           cellSize={cellSize}

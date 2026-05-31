@@ -119,7 +119,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-primary-600" viewBox="0 0 48 48">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-primary-500" viewBox="0 0 48 48">
               <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M38.993 9.009c-7.815 0-6.885 33.491-19.457 33.491S1.829 5.5 9.169 5.5s13.078 22.966 23.285 22.966S44.894 9.01 38.994 9.01Z"/>
             </svg>
             <span className="text-base font-semibold text-surface-100 tracking-tight">
@@ -170,7 +170,7 @@ export default function Navbar() {
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
-                    <div className="w-full h-full bg-primary-600 flex items-center justify-center text-white text-sm font-semibold">
+                    <div className="w-full h-full bg-primary-500 flex items-center justify-center text-white text-sm font-semibold">
                       {initial}
                     </div>
                   )}
@@ -192,7 +192,7 @@ export default function Navbar() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <div className="w-full h-full bg-primary-600 flex items-center justify-center text-white text-base font-semibold">
+                            <div className="w-full h-full bg-primary-500 flex items-center justify-center text-white text-base font-semibold">
                               {initial}
                             </div>
                           )}
@@ -266,9 +266,14 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <Link href="/login" className="btn-primary text-sm !py-1.5 !px-4">
-                Sign In
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link href="/login" className="text-surface-300 hover:text-white transition-colors text-sm font-medium">
+                  Sign In
+                </Link>
+                <Link href="/signup" className="btn-primary text-sm !py-2 !px-5">
+                  Get Started
+                </Link>
+              </div>
             )}
           </div>
         </div>

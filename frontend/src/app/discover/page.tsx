@@ -204,19 +204,26 @@ export default function DiscoverPage() {
         {/* Tabs & Filter Button (only when not searching) */}
         {query.length < 2 && (
           <div className="mb-10 flex items-center justify-center gap-4">
-            <div className="flex items-center gap-1 glass-light rounded-xl p-1 w-fit">
+            <div className="relative flex items-center bg-surface-900 border border-surface-800 rounded-full p-1 w-[260px] shrink-0">
+              {/* Sliding Background Indicator */}
+              <div
+                className="absolute top-1 bottom-1 left-1 w-[124px] bg-surface-700/80 rounded-full shadow-sm transition-transform duration-300 ease-out"
+                style={{
+                  transform: activeTab === "forYou" ? "translateX(0)" : "translateX(128px)",
+                }}
+              />
               <button
                 onClick={() => setActiveTab("forYou")}
-                className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === "forYou" ? "bg-primary-600 text-white shadow-lg" : "text-surface-400 hover:text-surface-100"
+                className={`relative z-10 w-[124px] py-2 text-sm font-medium transition-colors rounded-full ${
+                  activeTab === "forYou" ? "text-white drop-shadow-md" : "text-surface-400 hover:text-surface-200"
                 }`}
               >
                 For You
               </button>
               <button
                 onClick={() => setActiveTab("popular")}
-                className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === "popular" ? "bg-primary-600 text-white shadow-lg" : "text-surface-400 hover:text-surface-100"
+                className={`relative z-10 w-[124px] ml-1 py-2 text-sm font-medium transition-colors rounded-full ${
+                  activeTab === "popular" ? "text-white drop-shadow-md" : "text-surface-400 hover:text-surface-200"
                 }`}
               >
                 Popular
@@ -306,7 +313,7 @@ export default function DiscoverPage() {
               <div>
                 <label className="block text-sm font-medium text-surface-300 mb-2">Genre</label>
                 <SelectDropdown
-                  value={currentDraft.genre_id}
+                  value={currentDraft.genre_id ?? null}
                   onChange={(val) => setCurrentDraft({ ...currentDraft, genre_id: val ? Number(val) : null })}
                   options={[
                     { value: "", label: "All Genres" },
@@ -319,7 +326,7 @@ export default function DiscoverPage() {
               <div>
                 <label className="block text-sm font-medium text-surface-300 mb-2">Minimum Rating</label>
                 <SelectDropdown
-                  value={currentDraft.min_rating}
+                  value={currentDraft.min_rating ?? null}
                   onChange={(val) => setCurrentDraft({ ...currentDraft, min_rating: val ? Number(val) : null })}
                   options={[
                     { value: "", label: "Any Rating" },
@@ -336,7 +343,7 @@ export default function DiscoverPage() {
               <div>
                 <label className="block text-sm font-medium text-surface-300 mb-2">Sort By</label>
                 <SelectDropdown
-                  value={currentDraft.sort_by}
+                  value={currentDraft.sort_by ?? null}
                   onChange={(val) => setCurrentDraft({ ...currentDraft, sort_by: val ? String(val) : null })}
                   options={[
                     { value: "", label: activeTab === "forYou" ? "Best Match" : "Most Popular" },
@@ -379,7 +386,7 @@ export default function DiscoverPage() {
                 </button>
                 <button
                   onClick={handleApplyFilters}
-                  className="bg-primary-600 hover:bg-primary-500 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-lg shadow-primary-500/20"
+                  className="bg-primary-500 hover:bg-primary-400 text-white font-medium py-2.5 px-6 rounded-xl transition-colors shadow-lg shadow-primary-500/20"
                 >
                   Apply Filters
                 </button>

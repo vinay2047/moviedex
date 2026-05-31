@@ -125,7 +125,7 @@ export default function ProfilePage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-primary-600 flex items-center justify-center text-white text-3xl font-semibold">
+                  <div className="w-full h-full bg-primary-500 flex items-center justify-center text-white text-3xl font-semibold">
                     {initial}
                   </div>
                 )}
@@ -213,7 +213,7 @@ export default function ProfilePage() {
                         </div>
                       )}
                       <div 
-                        className="w-full bg-primary-600/40 group-hover:bg-primary-500/80 transition-colors duration-300 rounded-t-sm"
+                        className="w-full bg-primary-500/30 group-hover:bg-primary-500/70 transition-colors duration-300 rounded-t-sm"
                         style={{ 
                           height: bucket.count > 0 ? `${(bucket.count / maxRatingCount) * 100}%` : '2px',
                           minHeight: bucket.count > 0 ? '4px' : '2px'
