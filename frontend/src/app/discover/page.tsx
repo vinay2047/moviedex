@@ -188,7 +188,7 @@ export default function DiscoverPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search 9,724 movies..."
+              placeholder="Search 59,000+ movies..."
               className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-800 border border-surface-600 text-surface-100 placeholder-surface-500 text-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all"
             />
             {query && (

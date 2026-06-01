@@ -27,7 +27,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent  # moviedex/
 DATA_DIR = ROOT_DIR / "data"
 MAPPING_CSV = DATA_DIR / "movie_id_mapping.csv"
 MOVIES_CSV = DATA_DIR / "movies.csv"
-EMBEDDINGS_PT = DATA_DIR / "item_embeddings_db.pt"
+EMBEDDINGS_PT = DATA_DIR / "pgvector_item_embeddings.pt"
 
 # Add backend/ to sys.path so we can import app.config
 sys.path.insert(0, str(ROOT_DIR / "backend"))

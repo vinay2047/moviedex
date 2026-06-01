@@ -1,0 +1,10 @@
+# Model files
+models/
+*.pth
+*.pt
+*.onnx
+*.onnx.data
+
+# Error logs
+backend/err*.txt
+backend/error_log.txt

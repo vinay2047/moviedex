@@ -1,5 +1,7 @@
 """FastAPI application factory."""
 
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -8,13 +10,34 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application startup/shutdown lifecycle."""
+    """Application startup/shutdown lifecycle.
+
+    Startup:
+      - Loads the Two-Tower retrieval model and NeuMF ONNX ranker into memory
+        exactly once, storing the pipeline on ``app.state.pipeline``.
+    Shutdown:
+      - Disposes the async DB engine connection pool.
+    """
     # ── Startup ───────────────────────────────────────────────────────────
-    # Future: warm caches, verify DB connectivity, etc.
+    from app.services.pipeline import RecommendationPipeline
+
+    try:
+        pipeline = await asyncio.to_thread(
+            RecommendationPipeline.from_settings, settings
+        )
+        app.state.pipeline = pipeline
+        logger.info("✓ ML recommendation pipeline loaded successfully")
+    except Exception:
+        logger.exception("✗ Failed to load ML pipeline — recommendations will be unavailable")
+        app.state.pipeline = None
+
     yield
+
     # ── Shutdown ──────────────────────────────────────────────────────────
     from app.database import engine
 
@@ -25,7 +48,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="MovieDex API",
         description="AI-powered movie recommendation engine",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
         docs_url="/docs" if not settings.is_production else None,
         redoc_url="/redoc" if not settings.is_production else None,

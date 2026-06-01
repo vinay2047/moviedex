@@ -71,7 +71,7 @@ async def complete_onboarding(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Could not compute embedding. Ensure valid movie IDs (minimum 3).",
+            detail="Could not compute embedding. Ensure valid movie IDs (minimum 5).",
         )
 
     return {

@@ -38,6 +38,12 @@ export interface MovieRecommendation extends MovieSummary {
   score: number;
 }
 
+export interface DiagnosticsInfo {
+  pipeline_used: "neumf_ranker" | "cold_start_fallback";
+  user_index_assigned: boolean;
+  needs_retraining: boolean;
+}
+
 export interface UserProfile {
   id: string;
   onboarding_completed: boolean;
@@ -62,6 +68,10 @@ export interface PaginationMeta {
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: PaginationMeta;
+}
+
+export interface RecommendationResponse extends PaginatedResponse<MovieRecommendation> {
+  diagnostics?: DiagnosticsInfo;
 }
 
 export interface SingleResponse<T> {

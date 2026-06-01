@@ -14,10 +14,11 @@ PyJWT==2.10.1
 cryptography==44.0.3
 httpx==0.28.1
 
-# Data processing
+# Data processing & ML inference
 torch==2.7.0
 pandas==2.2.3
 numpy==2.2.6
+onnxruntime==1.22.0
 
 # TMDB hydration
 aiohttp==3.12.3

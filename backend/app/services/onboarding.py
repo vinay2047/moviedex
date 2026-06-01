@@ -34,7 +34,7 @@ async def compute_warm_start_embedding(
     )
     rows = result.all()
 
-    if len(rows) < 3:
+    if len(rows) < 5:
         return False
 
     # 2. Average embeddings

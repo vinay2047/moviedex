@@ -79,12 +79,16 @@ export default function ProfilePage() {
         );
       } else {
         slots.push(
-          <div key={`empty-${i}`} className="aspect-[2/3] rounded-lg border border-dashed border-surface-700/60 bg-surface-800/30 flex flex-col items-center justify-center text-surface-500">
-            <svg className="w-6 h-6 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <Link 
+            key={`empty-${i}`} 
+            href="/discover"
+            className="aspect-[2/3] rounded-lg border border-dashed border-surface-700/60 bg-surface-800/30 flex flex-col items-center justify-center text-surface-500 hover:border-primary-500/40 hover:bg-surface-800/50 group transition-all duration-300 cursor-pointer"
+          >
+            <svg className="w-6 h-6 mb-2 opacity-50 group-hover:opacity-100 group-hover:text-primary-400 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            <span className="text-[10px] uppercase tracking-widest font-medium opacity-50">Empty</span>
-          </div>
+            <span className="text-[10px] uppercase tracking-widest font-medium opacity-50 group-hover:opacity-100 group-hover:text-primary-400 transition-all">Empty</span>
+          </Link>
         );
       }
     }

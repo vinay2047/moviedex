@@ -78,6 +78,7 @@ import type {
   MovieSummary,
   MovieDetail,
   MovieRecommendation,
+  RecommendationResponse,
   UserProfile,
   RatingWithMovie,
   PaginatedResponse,
@@ -131,7 +132,7 @@ export const getRecommendations = (params: DiscoverParams = { limit: 20, offset:
   const queryParams = Object.fromEntries(
     Object.entries(params).filter(([_, v]) => v != null)
   );
-  return api<PaginatedResponse<MovieRecommendation>>("/api/v1/recommendations", {
+  return api<RecommendationResponse>("/api/v1/recommendations", {
     params: queryParams as Record<string, string | number>,
   });
 };

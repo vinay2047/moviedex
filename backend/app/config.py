@@ -29,6 +29,23 @@ class Settings(BaseSettings):
         description="Comma-separated allowed origins",
     )
 
+    # ── ML Pipeline ──────────────────────────────────────────────────
+    model_base_dir: str = Field(
+        "models",
+        description="Base directory for ML model files (defaults to models/)",
+    )
+    retrieval_model_path: str = Field(
+        "twotower_retrieval.pth",
+        description="Two-Tower retrieval model state_dict",
+    )
+    ranker_model_path: str = Field(
+        "neumf_ranker.onnx",
+        description="NeuMF ONNX ranker model",
+    )
+    retrieval_top_k: int = Field(100, description="Candidate pool size from retrieval stage")
+    onnx_intra_op_threads: int = Field(2, description="ONNX intra-op parallelism threads")
+    onnx_inter_op_threads: int = Field(1, description="ONNX inter-op parallelism threads")
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]

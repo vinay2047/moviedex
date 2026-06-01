@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, func
+from sqlalchemy import Boolean, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,10 @@ class User(Base):
     )
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     embedding = mapped_column(Vector(EMBEDDING_DIM), nullable=True)
+    model_user_index: Mapped[int | None] = mapped_column(
+        Integer, unique=True, nullable=True, index=True,
+        doc="Maps to Two-Tower model user_emb index (0-based). Null for users added after training.",
+    )
 
     # ── Timestamps ────────────────────────────────────────────────────────
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

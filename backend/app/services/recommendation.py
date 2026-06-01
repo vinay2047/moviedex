@@ -1,4 +1,10 @@
-"""Recommendation service — pgvector similarity queries."""
+"""Recommendation service — pgvector similarity queries.
+
+.. deprecated:: 0.2.0
+    This module is superseded by :mod:`app.services.pipeline`, which implements
+    the two-stage retrieval + ranking pipeline.  These functions are retained
+    for reference but are no longer invoked by any active router.
+"""
 
 import math
 import uuid

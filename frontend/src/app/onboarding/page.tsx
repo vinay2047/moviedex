@@ -43,7 +43,7 @@ export default function OnboardingPage() {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
-      } else if (next.size < 5) {
+      } else if (next.size < 10) {
         next.add(id);
       }
       return next;
@@ -51,7 +51,7 @@ export default function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
-    if (selected.size < 3) return;
+    if (selected.size < 5) return;
     setSubmitting(true);
     setError("");
 
@@ -74,12 +74,12 @@ export default function OnboardingPage() {
             Pick movies you <span className="gradient-text">love</span>
           </h1>
           <p className="mt-4 text-lg text-surface-400 max-w-2xl mx-auto">
-            Select 3 to 5 movies to train your personal taste profile. The more
+            Select 5 to 10 movies to train your personal taste profile. The more
             you pick, the better your recommendations will be.
           </p>
           <div className="mt-6 flex items-center justify-center gap-4">
-            <div className="flex items-center gap-2">
-              {[1, 2, 3, 4, 5].map((i) => (
+            <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-[200px]">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
                 <div
                   key={i}
                   className={`w-3 h-3 rounded-full transition-all ${
@@ -91,10 +91,10 @@ export default function OnboardingPage() {
               ))}
             </div>
             <span className="text-sm text-surface-400">
-              {selected.size} / 5 selected
-              {selected.size < 3 && (
+              {selected.size} / 10 selected
+              {selected.size < 5 && (
                 <span className="text-primary-500 ml-1">
-                  (min 3)
+                  (min 5)
                 </span>
               )}
             </span>
@@ -132,13 +132,13 @@ export default function OnboardingPage() {
         <div className="sticky bottom-0 py-6 mt-8">
           <div className="glass rounded-2xl p-4 flex items-center justify-between max-w-lg mx-auto">
             <span className="text-sm text-surface-300">
-              {selected.size >= 3
+              {selected.size >= 5
                 ? "Ready to go!"
-                : `Pick ${3 - selected.size} more`}
+                : `Pick ${5 - selected.size} more`}
             </span>
             <button
               onClick={handleSubmit}
-              disabled={selected.size < 3 || submitting}
+              disabled={selected.size < 5 || submitting}
               className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               id="onboarding-submit"
             >
