@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
-EMBEDDING_DIM = 32
+EMBEDDING_DIM = 64
 
 
 class Movie(Base):

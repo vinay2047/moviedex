@@ -50,6 +50,8 @@ NEGATIVE_RATIO = 4          # negatives per positive sample
 LEARNING_RATE = 1e-4
 NUM_EPOCHS = 5
 BATCH_SIZE = 512
+EMBED_DIM = 64
+MLP_LAYERS = [256, 128, 64]
 
 # Genre vocabulary — must match pipeline.py exactly
 GENRE_VOCAB: list[str] = [
@@ -68,14 +70,14 @@ GENRE_TO_IDX: dict[str, int] = {g: i for i, g in enumerate(GENRE_VOCAB)}
 class NeuMF(nn.Module):
     """Neural Matrix Factorisation (He et al., 2017) with genre side-info.
 
-    Architecture mirrors the original training code:
+    Architecture mirrors the upgraded training code:
       - GMF path:  user_gmf ⊙ item_gmf
       - MLP path:  concat(user_mlp, item_mlp, genre_linear(genre_vec))
-                    → 128 → ReLU → Dropout → 64 → ReLU → Dropout → 32
-      - Predict:   Linear(concat(gmf, mlp), 1)
+                    → [256 → BN → ReLU → Drop] → [128 → BN → ReLU → Drop] → 64
+      - Predict:   Linear(concat(gmf, mlp_out), 1)
     """
 
-    def __init__(self, num_users: int, num_items: int, embed_dim: int = 32):
+    def __init__(self, num_users: int, num_items: int, embed_dim: int = EMBED_DIM):
         super().__init__()
 
         # GMF path
@@ -89,19 +91,22 @@ class NeuMF(nn.Module):
         # Genre side-information projection
         self.genre_linear = nn.Linear(NUM_GENRES, embed_dim)
 
-        # MLP tower: input = user_mlp(32) + item_mlp(32) + genre(32) = 96
-        self.mlp_layers = nn.Sequential(
-            nn.Linear(96, 128),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(64, 32),
-        )
+        # MLP tower: input = user_mlp + item_mlp + genre = 3 * embed_dim
+        mlp_input_dim = embed_dim * 3
+        layers: list[nn.Module] = []
+        in_size = mlp_input_dim
+        for out_size in MLP_LAYERS[:-1]:
+            layers.append(nn.Linear(in_size, out_size))
+            layers.append(nn.BatchNorm1d(out_size))
+            layers.append(nn.ReLU())
+            layers.append(nn.Dropout(0.2))
+            in_size = out_size
+        # Final MLP layer (no BN / ReLU / Dropout — feeds straight into predict)
+        layers.append(nn.Linear(in_size, MLP_LAYERS[-1]))
+        self.mlp_layers = nn.Sequential(*layers)
 
-        # Final prediction: concat(gmf_32, mlp_32) → 1
-        self.predict_layer = nn.Linear(64, 1)
+        # Final prediction: concat(gmf, mlp_out) → 1
+        self.predict_layer = nn.Linear(embed_dim + MLP_LAYERS[-1], 1)
 
     def forward(
         self,
