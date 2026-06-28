@@ -213,7 +213,8 @@ export default function MovieDetailPage() {
               priority
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/60 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-surface-950 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-surface-950/90 via-surface-950/40 to-transparent" />
         </div>
 
@@ -280,7 +281,7 @@ export default function MovieDetailPage() {
               )}
 
               {/* ── Action Buttons ─────────────────────────────────────── */}
-              <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3 w-full max-w-2xl glass-card p-2 rounded-2xl">
+              <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3 w-full max-w-2xl">
                 {/* Watchlist — outline style */}
                 <button
                   onClick={handleToggleWatchlist}

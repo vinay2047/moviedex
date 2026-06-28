@@ -31,7 +31,7 @@ export default function SelectDropdown({ value, onChange, options, placeholder =
   }, []);
 
   return (
-    <div className="relative w-full" ref={dropdownRef}>
+    <div className={`relative w-full ${isOpen ? "z-50" : ""}`} ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -49,7 +49,7 @@ export default function SelectDropdown({ value, onChange, options, placeholder =
       </button>
 
       {isOpen && (
-        <div className="absolute z-[60] w-full mt-2 glass-card rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute z-[60] w-full mt-2 bg-surface-900 border border-surface-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
           {options.map((option) => {
             const isSelected = normalizedValue === option.value;
             return (
