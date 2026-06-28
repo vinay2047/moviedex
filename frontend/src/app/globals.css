@@ -115,10 +115,7 @@ body {
 /* ── Gradient text — vibrant ─────────────────────────────────────────── */
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-primary-400), var(--color-accent-400));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-primary-400);
 }
 
 /* ── Glow effects ────────────────────────────────────────────────────── */
@@ -174,8 +171,7 @@ body {
 
 .hero-gradient {
   background:
-    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(139, 92, 246, 0.12), transparent),
-    radial-gradient(ellipse 50% 40% at 80% 50%, rgba(20, 184, 166, 0.08), transparent);
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(139, 92, 246, 0.12), transparent);
 }
 
 /* ── Animated background orbs ────────────────────────────────────────── */
@@ -349,15 +345,11 @@ html.light .btn-secondary:hover {
 
 html.light .hero-gradient {
   background:
-    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(139, 92, 246, 0.08), transparent),
-    radial-gradient(ellipse 50% 40% at 80% 50%, rgba(20, 184, 166, 0.05), transparent);
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(139, 92, 246, 0.08), transparent);
 }
 
 html.light .gradient-text {
-  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-primary-600);
 }
 
 html.light .glow-primary {
