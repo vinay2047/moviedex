@@ -26,12 +26,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} dark`}>
       <body className="min-h-screen bg-surface-950 text-surface-200 font-sans antialiased">
-        {/* Ambient background — subtle, muted orbs */}
+        {/* Ambient background — cinematic orbs */}
         <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-          <div className="orb w-[500px] h-[500px] bg-primary-500 top-[-15%] left-[15%]" />
+          <div className="orb w-[600px] h-[600px] bg-primary-500 top-[-20%] left-[10%]" />
           <div
-            className="orb w-[400px] h-[400px] bg-primary-900 bottom-[5%] right-[5%]"
-            style={{ animationDelay: "3s" }}
+            className="orb w-[500px] h-[500px] bg-accent-500 bottom-[-10%] right-[5%]"
+            style={{ animationDelay: "4s" }}
           />
         </div>
         {children}

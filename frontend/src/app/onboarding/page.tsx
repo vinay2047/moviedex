@@ -130,7 +130,7 @@ export default function OnboardingPage() {
 
         {/* Submit */}
         <div className="sticky bottom-0 py-6 mt-8">
-          <div className="glass rounded-2xl p-4 flex items-center justify-between max-w-lg mx-auto">
+          <div className="glass-card rounded-full px-6 py-4 flex items-center justify-between max-w-lg mx-auto shadow-2xl">
             <span className="text-sm text-surface-300">
               {selected.size >= 5
                 ? "Ready to go!"

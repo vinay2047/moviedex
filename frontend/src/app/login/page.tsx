@@ -54,7 +54,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="glass rounded-2xl p-8">
+    <div className="glass-card rounded-3xl p-8 shadow-2xl">
       <h1 className="text-2xl font-display font-bold text-center mb-2">
         Welcome back
       </h1>
@@ -185,7 +185,7 @@ export default function LoginPage() {
 
         <Suspense
           fallback={
-            <div className="glass rounded-2xl p-8">
+            <div className="glass-card rounded-3xl p-8 shadow-2xl">
               <div className="skeleton h-8 w-48 mx-auto mb-8" />
               <div className="space-y-5">
                 <div className="skeleton h-12 w-full" />

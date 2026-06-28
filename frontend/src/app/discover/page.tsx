@@ -193,7 +193,7 @@ export default function DiscoverPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search 59,000+ movies..."
-              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-800 border border-surface-600 text-surface-100 placeholder-surface-500 text-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all"
+              className="w-full pl-12 pr-4 py-4 rounded-2xl glass-card text-surface-100 placeholder-surface-500 text-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 transition-all"
             />
             {query && (
               <button onClick={() => setQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-200">
@@ -208,7 +208,7 @@ export default function DiscoverPage() {
         {/* Tabs & Filter Button (only when not searching) */}
         {query.length < 2 && (
           <div className="mb-10 flex items-center justify-center gap-4">
-            <div className="relative flex items-center bg-surface-900 border border-surface-800 rounded-full p-1 w-[260px] shrink-0">
+            <div className="relative flex items-center glass-card rounded-full p-1 w-[260px] shrink-0">
               {/* Sliding Background Indicator */}
               <div
                 className="absolute top-1 bottom-1 left-1 w-[124px] bg-surface-700/80 rounded-full shadow-sm transition-transform duration-300 ease-out"
@@ -236,7 +236,7 @@ export default function DiscoverPage() {
             
             <button
               onClick={handleOpenFilters}
-              className="bg-surface-800 hover:bg-surface-700 border border-surface-600 text-surface-200 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+              className="glass-card hover:bg-surface-800/60 text-surface-200 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -296,8 +296,8 @@ export default function DiscoverPage() {
 
       {/* Filter Modal */}
       {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
-          <div className="bg-surface-900 border border-surface-700 rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md">
+          <div className="glass-card bg-surface-900/80 rounded-3xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="flex-none flex items-center justify-between p-4 sm:p-6 border-b border-surface-800">
               <h3 className="text-xl font-display font-semibold text-white">Filters</h3>

@@ -159,11 +159,11 @@ export default function ProfilePage() {
               
               {/* Metric Cards */}
               <div className="grid grid-cols-2 gap-6">
-                <div className="bg-surface-900 border border-surface-700/40 rounded-2xl p-6 flex flex-col justify-center">
+                <div className="glass-card rounded-2xl p-6 flex flex-col justify-center">
                   <div className="text-sm font-medium text-surface-400 uppercase tracking-widest mb-2">Total Watched</div>
                   <div className="text-4xl font-semibold text-surface-100">{stats?.total_watched || 0}</div>
                 </div>
-                <div className="bg-surface-900 border border-surface-700/40 rounded-2xl p-6 flex flex-col justify-center">
+                <div className="glass-card rounded-2xl p-6 flex flex-col justify-center">
                   <div className="text-sm font-medium text-surface-400 uppercase tracking-widest mb-2">Average Rating</div>
                   <div className="text-4xl font-semibold text-surface-100 flex items-baseline gap-1">
                     {stats?.average_rating ? stats.average_rating.toFixed(1) : "0.0"}
@@ -173,7 +173,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Top Genres */}
-              <div className="bg-surface-900 border border-surface-700/40 rounded-2xl p-6">
+              <div className="glass-card rounded-2xl p-6">
                 <div className="text-sm font-medium text-surface-400 uppercase tracking-widest mb-6">Top Genres</div>
                 {stats?.top_genres && stats.top_genres.length > 0 ? (
                   <div className="space-y-5">
@@ -204,7 +204,7 @@ export default function ProfilePage() {
             </section>
 
             {/* 4. Rating Distribution */}
-            <section className="bg-surface-900 border border-surface-700/40 rounded-2xl p-6 md:p-8">
+            <section className="glass-card rounded-2xl p-6 md:p-8">
               <div className="text-sm font-medium text-surface-400 uppercase tracking-widest mb-8">Rating Distribution</div>
               
               <div className="flex items-end h-48 gap-1 sm:gap-2">

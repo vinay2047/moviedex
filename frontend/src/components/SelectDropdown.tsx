@@ -35,7 +35,7 @@ export default function SelectDropdown({ value, onChange, options, placeholder =
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-surface-800 border border-surface-700 rounded-xl px-4 py-3 text-left text-surface-100 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 flex items-center justify-between transition-colors"
+        className="w-full glass-card rounded-xl px-4 py-3 text-left text-surface-100 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 flex items-center justify-between transition-colors"
       >
         <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         <svg
@@ -49,7 +49,7 @@ export default function SelectDropdown({ value, onChange, options, placeholder =
       </button>
 
       {isOpen && (
-        <div className="absolute z-[60] w-full mt-2 bg-surface-800 border border-surface-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute z-[60] w-full mt-2 glass-card rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
           {options.map((option) => {
             const isSelected = normalizedValue === option.value;
             return (

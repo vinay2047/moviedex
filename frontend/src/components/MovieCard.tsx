@@ -31,10 +31,10 @@ export default function MovieCard({
 
   const card = (
     <div
-      className={`movie-card group relative rounded-xl overflow-hidden cursor-pointer ${
+      className={`movie-card group relative rounded-2xl overflow-hidden cursor-pointer bg-surface-800 ${
         selected
           ? "ring-2 ring-primary-500 glow-primary"
-          : "ring-1 ring-surface-700/50"
+          : "ring-1 ring-white/5"
       }`}
       onClick={onSelect ? handleClick : undefined}
     >
@@ -61,16 +61,16 @@ export default function MovieCard({
 
         {/* Score badge */}
         {showScore && score !== undefined && (
-          <div className="absolute top-2 right-2 bg-primary-500/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-lg">
-            {(score * 100).toFixed(0)}% match
+          <div className="absolute top-2 right-2 bg-surface-900/80 backdrop-blur-md border border-white/10 text-white text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded-full shadow-lg">
+            <span className="gradient-text">{(score * 100).toFixed(0)}% match</span>
           </div>
         )}
 
         {/* Selected checkmark */}
         {selected && (
-          <div className="absolute top-2 left-2 bg-primary-500 text-white rounded-full w-7 h-7 flex items-center justify-center">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          <div className="absolute top-2 left-2 bg-primary-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg shadow-primary-500/40">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
           </div>
         )}

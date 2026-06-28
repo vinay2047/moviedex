@@ -178,7 +178,7 @@ export default function Navbar() {
 
                 {/* Dropdown */}
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-72 rounded-xl bg-surface-900 border border-surface-700/60 shadow-2xl shadow-black/40 overflow-hidden z-50 animate-fade-in-up">
+                  <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl glass-card overflow-hidden z-50 animate-fade-in-up origin-top-right">
                     {/* Profile section */}
                     <div className="px-4 py-4 border-b border-surface-800">
                       <div className="flex items-center gap-3">

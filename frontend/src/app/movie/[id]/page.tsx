@@ -213,8 +213,8 @@ export default function MovieDetailPage() {
               priority
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/60 to-surface-950/20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-surface-950/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-surface-950/90 via-surface-950/40 to-transparent" />
         </div>
 
         {/* Content */}
@@ -280,7 +280,7 @@ export default function MovieDetailPage() {
               )}
 
               {/* ── Action Buttons ─────────────────────────────────────── */}
-              <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3 w-full max-w-2xl">
+              <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3 w-full max-w-2xl glass-card p-2 rounded-2xl">
                 {/* Watchlist — outline style */}
                 <button
                   onClick={handleToggleWatchlist}
@@ -447,7 +447,7 @@ export default function MovieDetailPage() {
             if (e.target === e.currentTarget) setShowRatingDialog(false);
           }}
         >
-          <div className="bg-surface-900 border border-surface-700/60 rounded-2xl shadow-2xl shadow-black/50 w-full max-w-sm mx-4 p-6 animate-fade-in-up">
+          <div className="glass-card bg-surface-900/80 rounded-3xl w-full max-w-sm mx-4 p-6 animate-fade-in-up">
             <h3 className="text-lg font-semibold text-surface-100 mb-1">
               Mark as Watched
             </h3>

@@ -16,7 +16,7 @@ import type { User } from "@supabase/supabase-js";
 /* ── Rating badge overlay for watched grid cards ────────────────────── */
 function RatingBadge({ rating }: { rating: number }) {
   return (
-    <div className="absolute top-2 right-2 flex items-center gap-1 bg-surface-950/80 backdrop-blur-sm text-xs font-semibold px-2 py-1 rounded-lg border border-surface-700/40">
+    <div className="absolute top-2 right-2 flex items-center gap-1 glass-card text-xs font-semibold px-2 py-1 rounded-full shadow-lg">
       <svg className="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
       </svg>
@@ -47,7 +47,7 @@ function WatchedPosterCard({ movie, rating, onRateClick }: { movie: { id: number
 
   return (
     <Link href={`/movie/${movie.id}`} id={`watched-card-${movie.id}`}>
-      <div className="movie-card group relative rounded-xl overflow-hidden ring-1 ring-surface-700/50 cursor-pointer">
+      <div className="movie-card group relative rounded-2xl overflow-hidden ring-1 ring-white/5 cursor-pointer bg-surface-800">
         <div className="aspect-[2/3] relative bg-surface-800 overflow-hidden">
           {movie.poster_path ? (
             <Image
@@ -213,7 +213,7 @@ function ProfileContent() {
       <h1 className="text-3xl font-semibold tracking-tight text-surface-100 mb-8">Your Library</h1>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-8 bg-surface-800/50 border border-surface-700/40 rounded-xl p-1 w-fit">
+      <div className="flex items-center gap-1 mb-8 glass-card rounded-xl p-1 w-fit">
         <button
           onClick={() => setActiveTab("watchlist")}
           className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
@@ -329,7 +329,7 @@ function ProfileContent() {
       {/* ── Rating Dialog ──────────────────────────────────────────────── */}
       {ratingMovie && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-surface-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface-900 border border-surface-700/50 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="glass-card bg-surface-900/80 rounded-3xl p-6 w-full max-w-md shadow-2xl">
             <h3 className="text-xl font-semibold text-surface-100 mb-2">Rate {ratingMovie.title}</h3>
             <p className="text-sm text-surface-400 mb-6">Select a rating out of 5 stars.</p>
             

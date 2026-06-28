@@ -70,7 +70,7 @@ export default function SignupPage() {
           </Link>
         </div>
 
-        <div className="glass rounded-2xl p-8">
+        <div className="glass-card rounded-3xl p-8 shadow-2xl">
           <h1 className="text-2xl font-display font-bold text-center mb-2">
             Create your account
           </h1>
