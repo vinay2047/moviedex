@@ -35,7 +35,7 @@ async def personalized_recommendations(
     """
     # Guard: onboarding must be completed
     user = await db.get(User, user_id)
-    if user is None or not user.onboarding_completed or user.embedding is None:
+    if user is None or not user.onboarding_completed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Onboarding not completed. Please select movies first.",

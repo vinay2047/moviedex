@@ -55,24 +55,18 @@ GENRE_TO_IDX: dict[str, int] = {g: i for i, g in enumerate(GENRE_VOCAB)}
 NUM_GENRES: int = len(GENRE_VOCAB)
 
 
-def _normalize_scores(scores: list[float], low: float = 0.05, high: float = 0.99) -> list[float]:
-    """Min-max normalize a list of scores into [low, high].
+def _sigmoid_scores(scores: list[float]) -> list[float]:
+    """Convert raw NeuMF logits to 0-1 probabilities using a sigmoid.
 
-    Guarantees visual spread across the range regardless of the model's
-    raw logit magnitude.  When all scores are identical, returns the
-    midpoint so the UI doesn't show a misleading 99%.
+    This is the mathematically correct transformation for model logits
+    (the inverse of the log-odds used during training).
     """
-    if not scores:
-        return []
-    s_min = min(scores)
-    s_max = max(scores)
-    if s_max - s_min < 1e-9:          # all scores identical
-        mid = round((low + high) / 2, 4)
-        return [mid] * len(scores)
-    return [
-        round(low + (s - s_min) / (s_max - s_min) * (high - low), 4)
-        for s in scores
-    ]
+    return [round(float(1 / (1 + np.exp(-s))), 4) for s in scores]
+
+
+def _format_cosine_scores(scores: list[float]) -> list[float]:
+    """Clamp cosine similarity to 0-1 and round for display."""
+    return [round(max(0.0, float(s)), 4) for s in scores]
 
 
 def _encode_genres_multihot(genres_jsonb: list[dict] | None) -> np.ndarray:
@@ -227,6 +221,7 @@ class RecommendationPipeline:
         min_rating: float | None = None,
         require_metadata: bool = False,
         is_cold_start: bool = False,
+        embedding_column: Any = None,
     ) -> list[CandidateItem]:
         """Stage 1-B: pgvector ANN search for top-K candidate items.
 
@@ -267,6 +262,8 @@ class RecommendationPipeline:
             conditions.append(Movie.vote_count >= 1500)
             conditions.append(Movie.vote_average >= 7.0)
 
+        emb_col = embedding_column if embedding_column is not None else Movie.embedding
+
         query = (
             select(
                 Movie.id,
@@ -276,7 +273,7 @@ class RecommendationPipeline:
                 Movie.genres,
                 Movie.vote_average,
                 Movie.release_date,
-                (Movie.embedding.max_inner_product(emb_list)).label("neg_score"),
+                (emb_col.max_inner_product(emb_list)).label("neg_score"),
             )
             .where(*conditions)
             .order_by(text("neg_score ASC"))
@@ -386,7 +383,7 @@ class RecommendationPipeline:
 
         # ── 1. Fetch user ─────────────────────────────────────────────────
         user = await db.get(User, user_id)
-        if user is None or user.embedding is None:
+        if user is None:
             return [], 0, diagnostics
 
         diagnostics["user_index_assigned"] = user.model_user_index is not None
@@ -452,15 +449,21 @@ class RecommendationPipeline:
             # Exclude onboarding movies so we don't recommend them
             exclude_ids.update(onboarding_movies)
 
-            # Fetch 32-dimensional pgvector item embeddings
+            # Fetch 384-dimensional pgvector item content embeddings
             vectors = (await db.execute(
-                select(Movie.embedding)
+                select(Movie.content_embedding)
                 .where(Movie.id.in_(onboarding_movies))
             )).scalars().all()
 
-            # Calculate Centroid using NumPy
+            # Calculate Centroid using NumPy and L2-normalize
+            # all-MiniLM-L6-v2 produces unit vectors, but the mean of unit
+            # vectors is NOT unit-length.  Normalizing restores the centroid
+            # to the unit sphere so that max_inner_product == cosine similarity.
             vectors_np = np.array([v for v in vectors if v is not None], dtype=np.float32)
-            centroid = np.mean(vectors_np, axis=0) if len(vectors_np) > 0 else np.zeros(32, dtype=np.float32)
+            centroid = np.mean(vectors_np, axis=0) if len(vectors_np) > 0 else np.zeros(384, dtype=np.float32)
+            norm = np.linalg.norm(centroid)
+            if norm > 0:
+                centroid = centroid / norm
 
             # Vector Search via pgvector — require_metadata filters out
             # the ~50k skeleton movies that lack TMDB data (no poster/votes).
@@ -474,6 +477,7 @@ class RecommendationPipeline:
                 min_rating=min_rating,
                 require_metadata=True,
                 is_cold_start=True,
+                embedding_column=Movie.content_embedding,
             )
             recommendations = self._candidates_to_dicts(candidates)
 
@@ -518,8 +522,8 @@ class RecommendationPipeline:
                 ordered_candidates = [c for c, _ in ranked]
                 ordered_raw = [s for _, s in ranked]
 
-                # Min-max normalize for display scores
-                display_scores = _normalize_scores(ordered_raw)
+                # Convert raw logits to probabilities via Sigmoid
+                display_scores = _sigmoid_scores(ordered_raw)
 
                 recommendations = [
                     {
@@ -559,12 +563,15 @@ class RecommendationPipeline:
         """Item-item similarity using the movie's stored pgvector embedding.
 
         This is a retrieval-only operation (no user context for re-ranking).
+        Filters out low-relevance items by requiring their raw similarity 
+        score to be within a relative threshold of the top match.
         """
         movie = await db.get(Movie, movie_id)
-        if movie is None:
+        if movie is None or movie.content_embedding is None:
             return []
 
-        source_emb = movie.embedding
+        source_emb = movie.content_embedding
+        fetch_limit = limit * 3  # Over-fetch for filtering
 
         query = (
             select(
@@ -575,18 +582,46 @@ class RecommendationPipeline:
                 Movie.genres,
                 Movie.vote_average,
                 Movie.release_date,
-                (Movie.embedding.max_inner_product(source_emb)).label("neg_score"),
+                (Movie.content_embedding.max_inner_product(source_emb)).label("neg_score"),
             )
-            .where(Movie.id != movie_id)
+            .where(
+                Movie.id != movie_id,
+                Movie.poster_path.isnot(None),
+                Movie.vote_count.isnot(None),
+                Movie.vote_count >= 50,
+                Movie.vote_average.isnot(None),
+            )
             .order_by(text("neg_score ASC"))
-            .limit(limit)
+            .limit(fetch_limit)
         )
 
         result = await db.execute(query)
         rows = result.all()
 
-        raw_scores = [-row.neg_score for row in rows]
-        display_scores = _normalize_scores(raw_scores)
+        if not rows:
+            return []
+
+        # Raw scores are negated pgvector neg_scores (so higher = more similar)
+        scored_rows = [(row, -row.neg_score) for row in rows]
+        
+        # Filter: keep items whose score is at least 65% of the best match's score
+        top_score = scored_rows[0][1]
+        
+        # Only apply relative filtering if top_score is positive 
+        # (since dot products can theoretically be negative)
+        if top_score > 0:
+            threshold = top_score * 0.65
+            filtered_rows = [r for r in scored_rows if r[1] >= threshold]
+        else:
+            filtered_rows = scored_rows
+
+        # Truncate back to the requested limit
+        filtered_rows = filtered_rows[:limit]
+
+        final_rows = [r[0] for r in filtered_rows]
+        final_scores = [r[1] for r in filtered_rows]
+        
+        display_scores = _format_cosine_scores(final_scores)
 
         return [
             {
@@ -598,7 +633,7 @@ class RecommendationPipeline:
                 "release_date": row.release_date,
                 "score": ds,
             }
-            for row, ds in zip(rows, display_scores)
+            for row, ds in zip(final_rows, display_scores)
         ]
 
     # ── Helpers ───────────────────────────────────────────────────────────
@@ -607,7 +642,7 @@ class RecommendationPipeline:
     def _candidates_to_dicts(candidates: list[CandidateItem]) -> list[dict]:
         """Convert retrieval candidates to response dicts using retrieval scores."""
         raw_scores = [c.retrieval_score for c in candidates]
-        display_scores = _normalize_scores(raw_scores)
+        display_scores = _format_cosine_scores(raw_scores)
 
         return [
             {

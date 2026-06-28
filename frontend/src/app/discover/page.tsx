@@ -33,6 +33,7 @@ export default function DiscoverPage() {
   const [activeTab, setActiveTab] = useState<"forYou" | "popular">("forYou");
   const [genres, setGenres] = useState<{ id: number; name: string }[]>([]);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   // Filter States
   const currentYear = new Date().getFullYear();
@@ -61,6 +62,7 @@ export default function DiscoverPage() {
           router.push("/onboarding");
           return;
         }
+        setIsReady(true);
         const genreRes = await getGenres();
         setGenres(genreRes.data);
       } catch (err) {
@@ -72,6 +74,7 @@ export default function DiscoverPage() {
 
   // Fetch For You data when appliedForYou changes
   useEffect(() => {
+    if (!isReady) return;
     const fetchForYou = async () => {
       setLoading(true);
       try {
@@ -84,10 +87,11 @@ export default function DiscoverPage() {
       }
     };
     fetchForYou();
-  }, [appliedForYou]);
+  }, [appliedForYou, isReady]);
 
   // Fetch Popular data when appliedPopular changes
   useEffect(() => {
+    if (!isReady) return;
     const fetchPopular = async () => {
       setLoading(true);
       try {
@@ -100,7 +104,7 @@ export default function DiscoverPage() {
       }
     };
     fetchPopular();
-  }, [appliedPopular]);
+  }, [appliedPopular, isReady]);
 
   // Debounced search
   const handleSearch = useCallback(async (q: string) => {

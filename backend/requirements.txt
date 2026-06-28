@@ -19,6 +19,7 @@ torch==2.7.0
 pandas==2.2.3
 numpy==2.2.6
 onnxruntime==1.22.0
+sentence-transformers==3.4.1
 
 # TMDB hydration
 aiohttp==3.12.3

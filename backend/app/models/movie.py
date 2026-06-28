@@ -37,7 +37,8 @@ class Movie(Base):
     trailer_key: Mapped[str | None] = mapped_column(String(64))
 
     # ── Embedding ─────────────────────────────────────────────────────────
-    embedding = mapped_column(Vector(EMBEDDING_DIM), nullable=False)
+    embedding = mapped_column(Vector(EMBEDDING_DIM), nullable=True)
+    content_embedding = mapped_column(Vector(384), nullable=True)
 
     # ── Timestamps ────────────────────────────────────────────────────────
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

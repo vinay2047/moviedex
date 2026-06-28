@@ -426,8 +426,8 @@ export default function MovieDetailPage() {
           {/* Similar movies */}
           {similar.length > 0 && (
             <section className="mt-16 mb-12">
-              <h2 className="text-2xl font-semibold tracking-tight mb-6 text-surface-100">
-                Similar movies
+              <h2 className="text-2xl font-bold mb-6 text-slate-100">
+                Semantic Similar Movies
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {similar.map((m) => (

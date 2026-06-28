@@ -8,7 +8,7 @@ from app.models.movie import Movie
 from app.models.user import User
 from app.schemas.movie import MovieSummary
 from app.schemas.recommendation import OnboardingRequest, OnboardingResponse
-from app.services.onboarding import compute_warm_start_embedding
+from app.services.onboarding import save_onboarding_selections
 
 router = APIRouter(prefix="/api/v1/onboarding", tags=["onboarding"])
 
@@ -50,13 +50,8 @@ async def complete_onboarding(
     body: OnboardingRequest,
 ) -> dict:
     """
-    Submit 3-5 movie selections to compute the warm-start user embedding.
-
-    Backend logic:
-    1. Fetch item embeddings for selected movies.
-    2. Average them.
-    3. L2-normalize.
-    4. Store as user embedding; mark onboarding complete.
+    Save the user's selected movies and mark onboarding as complete.
+    The explicit selections will be used dynamically during cold-start fallback.
     """
     # Check if already onboarded
     user = await db.get(User, user_id)
@@ -66,12 +61,12 @@ async def complete_onboarding(
             detail="Onboarding already completed.",
         )
 
-    success = await compute_warm_start_embedding(db, user_id, body.movie_ids)
+    success = await save_onboarding_selections(db, user_id, body.movie_ids)
 
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Could not compute embedding. Ensure valid movie IDs (minimum 5).",
+            detail="Could not save selections. Ensure valid movie IDs (minimum 5).",
         )
 
     return {
