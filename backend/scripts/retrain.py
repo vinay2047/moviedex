@@ -137,8 +137,14 @@ class NeuMF(nn.Module):
 
 def get_supabase_client() -> Client:
     """Instantiate an authenticated Supabase client from env vars."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(Path(__file__).parent.parent / ".env")
+    except ImportError:
+        pass
+        
     url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SECRET_KEY")
     if not url or not key:
         logger.error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.")
         sys.exit(1)
@@ -500,6 +506,12 @@ def download_model(filename: str, dest: Path) -> None:
 def upload_model(filename: str, src: Path) -> None:
     """Upload a model file to Hugging Face Hub."""
     size_mb = src.stat().st_size / (1024 * 1024)
+    hf_token = os.environ.get("HF_TOKEN")
+    
+    if not hf_token:
+        logger.warning("HF_TOKEN is missing! Skipping upload of %s (%.1f MB) to repo '%s' for local testing.", filename, size_mb, HF_REPO_ID)
+        return
+        
     logger.info("Uploading %s (%.1f MB) to repo '%s' …", filename, size_mb, HF_REPO_ID)
 
     api = HfApi()
@@ -508,7 +520,7 @@ def upload_model(filename: str, src: Path) -> None:
         path_in_repo=filename,
         repo_id=HF_REPO_ID,
         repo_type="model",
-        token=os.environ.get("HF_TOKEN")
+        token=hf_token
     )
     logger.info("  → upload complete.")
 
@@ -595,9 +607,7 @@ def main() -> None:
         if num_new_users > 0:
             logger.info("Found %d unmapped users. Assigning new model indices.", num_new_users)
             
-            # Query the actual max model_user_index from the DB to avoid
-            # collisions when a previous run assigned indices but crashed
-            # before uploading updated weights.
+            # Query the actual max model_user_index from the DB
             max_idx_resp = (
                 sb.table("users")
                 .select("model_user_index")
@@ -616,12 +626,6 @@ def main() -> None:
             # Use the higher of model size vs DB max to be safe
             next_idx = max(next_idx, num_users)
             
-            # If next_idx is higher than the model's current num_users, we MUST 
-            # pad the model with dummy rows to bridge the gap, otherwise the new 
-            # users will get indices that are out of bounds of the embedding matrix.
-            pad_users = next_idx - num_users
-            total_users_to_add = pad_users + num_new_users
-            
             new_user_mappings = []
             for uid in unmapped_user_ids:
                 new_user_mappings.append({"id": str(uid), "model_user_index": next_idx})
@@ -634,12 +638,25 @@ def main() -> None:
             
             # Remap interactions with the updated user_map
             interactions["user_index"] = interactions["user_id"].map(user_map)
-            
-            # Expand state dict (including any padding rows to bridge gaps)
-            if total_users_to_add > 0:
-                logger.info("Padding model with %d gap rows and %d new users...", pad_users, num_new_users)
-                state_dict = expand_user_embeddings_in_state_dict(state_dict, total_users_to_add, embed_dim)
-                num_users += total_users_to_add
+
+        # ── 3b. Safe Padding for Stale Models ─────────────────────────────────
+        # Even if there are no *new* unmapped users today, the PyTorch model might 
+        # be stale (e.g. a previous run crashed before uploading weights). 
+        # We must ensure the model's embedding matrix covers all indices in the DB.
+        
+        # We drop NA first so max() doesn't fail
+        interactions.dropna(subset=["user_index", "movie_index"], inplace=True)
+        
+        if not interactions.empty:
+            max_required_idx = int(interactions["user_index"].max())
+            if max_required_idx >= num_users:
+                pad_users = (max_required_idx - num_users) + 1
+                logger.warning(
+                    "Model vocabulary (%d) is stale compared to DB interactions (max %d). Padding %d rows.", 
+                    num_users, max_required_idx, pad_users
+                )
+                state_dict = expand_user_embeddings_in_state_dict(state_dict, pad_users, embed_dim)
+                num_users += pad_users
 
         # Final drop to be absolutely safe
         interactions.dropna(subset=["user_index", "movie_index"], inplace=True)
