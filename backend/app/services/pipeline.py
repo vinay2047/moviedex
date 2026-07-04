@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,7 +34,7 @@ from typing import Any, Sequence
 import numpy as np
 import onnxruntime as ort
 import torch
-from sqlalchemy import select, text, extract
+from sqlalchemy import func, select, text, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.movie import Movie
@@ -55,18 +56,72 @@ GENRE_TO_IDX: dict[str, int] = {g: i for i, g in enumerate(GENRE_VOCAB)}
 NUM_GENRES: int = len(GENRE_VOCAB)
 
 
+def _sigmoid(x: float) -> float:
+    """Standard sigmoid: maps any real number to (0, 1).
+
+    Clamps input to [-500, 500] to prevent overflow in math.exp.
+    """
+    x = max(-500.0, min(500.0, x))
+    return 1.0 / (1.0 + math.exp(-x))
+
+
 def _sigmoid_scores(scores: list[float]) -> list[float]:
     """Convert raw NeuMF logits to 0-1 probabilities using a sigmoid.
 
     This is the mathematically correct transformation for model logits
     (the inverse of the log-odds used during training).
     """
-    return [round(float(1 / (1 + np.exp(-s))), 4) for s in scores]
+    return [round(_sigmoid(s), 4) for s in scores]
 
 
 def _format_cosine_scores(scores: list[float]) -> list[float]:
     """Clamp cosine similarity to 0-1 and round for display."""
     return [round(max(0.0, float(s)), 4) for s in scores]
+
+
+def _min_max_normalize(scores: list[float], low: float = 0.05, high: float = 0.95) -> list[float]:
+    """Min-max normalize a list of scores into [low, high].
+
+    When all scores are identical, returns the midpoint so the UI
+    doesn't show a misleading 95%.
+    """
+    if not scores:
+        return []
+    s_min = min(scores)
+    s_max = max(scores)
+    if s_max - s_min < 1e-9:
+        mid = round((low + high) / 2, 4)
+        return [mid] * len(scores)
+    return [
+        round(low + (s - s_min) / (s_max - s_min) * (high - low), 4)
+        for s in scores
+    ]
+
+
+# ── S-Curve Blending Constants ───────────────────────────────────────────────
+
+_SCURVE_N_MIN = 10     # Below this: pure pgvector (α = 0)
+_SCURVE_N_MAX = 40     # Above this: pure NeuMF   (α = 1)
+_SCURVE_CENTER = 25.0  # Midpoint of the sigmoid
+_SCURVE_K = 0.4        # Steepness — tuned so α ≈ 0.002 at N=10, ≈ 0.998 at N=40
+
+
+def _compute_blend_alpha(interaction_count: int) -> float:
+    """Compute the S-Curve blending weight α ∈ [0, 1].
+
+    - N ≤ 10 → α = 0.0  (pure pgvector)
+    - N ≥ 40 → α = 1.0  (pure NeuMF)
+    - 10 < N < 40 → sigmoid curve centered at 25
+
+    The sigmoid ensures a smooth, gradual transition as the user
+    accumulates interactions, avoiding jarring recommendation shifts.
+    """
+    if interaction_count <= _SCURVE_N_MIN:
+        return 0.0
+    if interaction_count >= _SCURVE_N_MAX:
+        return 1.0
+    alpha = _sigmoid(_SCURVE_K * (interaction_count - _SCURVE_CENTER))
+    return max(0.0, min(1.0, alpha))
 
 
 def _encode_genres_multihot(genres_jsonb: list[dict] | None) -> np.ndarray:
@@ -352,6 +407,22 @@ class RecommendationPipeline:
     # Full pipeline orchestrators
     # ──────────────────────────────────────────────────────────────────────
 
+    async def _get_interaction_count(self, db: AsyncSession, user_id: uuid.UUID) -> int:
+        """Count the user's total distinct interactions.
+
+        Interactions = distinct rated movies + distinct watched movies
+        (watch_history entries with status='watched').  The UNION
+        de-duplicates movies that appear in both tables.
+        """
+        rated_q = select(Rating.movie_id).where(Rating.user_id == user_id)
+        watched_q = (
+            select(WatchHistory.movie_id)
+            .where(WatchHistory.user_id == user_id, WatchHistory.status == "watched")
+        )
+        union_q = rated_q.union(watched_q).subquery()
+        result = await db.execute(select(func.count()).select_from(union_q))
+        return result.scalar_one()
+
     async def recommend_for_user(
         self,
         db: AsyncSession,
@@ -365,12 +436,19 @@ class RecommendationPipeline:
         min_rating: float | None = None,
         sort_by: str | None = None,
     ) -> tuple[list[dict], int, dict]:
-        """End-to-end personalised recommendations.
+        """End-to-end personalised recommendations with S-Curve blending.
 
-        1. Look up user → determine if Two-Tower index exists.
-        2. Retrieve top-K candidates via pgvector ANN.
-        3. (If model index exists) Re-rank via NeuMF ONNX.
-        4. Sort, paginate, return.
+        Pipeline overview:
+          1. Fetch user, determine if model_user_index exists.
+          2. If no model index → pure cold-start pgvector fallback.
+          3. If model index exists:
+             a. Count interactions N.
+             b. Compute blend α via S-curve (0 at N≤10, 1 at N≥40).
+             c. Retrieve pgvector candidates (cosine scores).
+             d. Run NeuMF ONNX re-ranking (sigmoid logits).
+             e. Blend: final = α·neumf + (1-α)·pgvector.
+             f. Re-sort by blended score.
+          4. Apply optional external sort, paginate.
 
         Returns ``(list_of_movie_dicts, total_count, diagnostics)``.
         """
@@ -379,6 +457,8 @@ class RecommendationPipeline:
             "pipeline_used": "cold_start_fallback",
             "user_index_assigned": False,
             "needs_retraining": False,
+            "interaction_count": 0,
+            "blend_alpha": 0.0,
         }
 
         # ── 1. Fetch user ─────────────────────────────────────────────────
@@ -399,27 +479,25 @@ class RecommendationPipeline:
         )
         exclude_ids = rated_ids | watched_ids
 
-        # ── 2. Determine retrieval embedding ──────────────────────────────
+        # ── 2. Safety Check: Hard Fallback ────────────────────────────────
         has_model_index = user.model_user_index is not None
         if has_model_index:
-            # Use the learned Two-Tower embedding
             user_emb = await asyncio.to_thread(
                 self.get_user_embedding, user.model_user_index
             )
             if user_emb is None:
                 has_model_index = False
                 diagnostics["needs_retraining"] = True
-        
+
         # When sorting by external criteria, fetch a larger pool to re-sort
         retrieval_k = self._retrieval_top_k
         if sort_by:
             retrieval_k = max(retrieval_k, 100)
 
         if not has_model_index:
-            # ── COLD START FALLBACK LOGIC ──
+            # ── COLD START FALLBACK (pure pgvector — no NeuMF) ────────────
             diagnostics["pipeline_used"] = "cold_start_fallback"
 
-            # 1. Bypass NeuMF: Fetch Onboarding Data
             onboarding_movies = (await db.execute(
                 select(OnboardingSelection.movie_id)
                 .where(OnboardingSelection.user_id == user_id)
@@ -446,27 +524,19 @@ class RecommendationPipeline:
                     for m in popular_movies
                 ], len(popular_movies), diagnostics
 
-            # Exclude onboarding movies so we don't recommend them
             exclude_ids.update(onboarding_movies)
 
-            # Fetch 384-dimensional pgvector item content embeddings
             vectors = (await db.execute(
                 select(Movie.content_embedding)
                 .where(Movie.id.in_(onboarding_movies))
             )).scalars().all()
 
-            # Calculate Centroid using NumPy and L2-normalize
-            # all-MiniLM-L6-v2 produces unit vectors, but the mean of unit
-            # vectors is NOT unit-length.  Normalizing restores the centroid
-            # to the unit sphere so that max_inner_product == cosine similarity.
             vectors_np = np.array([v for v in vectors if v is not None], dtype=np.float32)
             centroid = np.mean(vectors_np, axis=0) if len(vectors_np) > 0 else np.zeros(384, dtype=np.float32)
             norm = np.linalg.norm(centroid)
             if norm > 0:
                 centroid = centroid / norm
 
-            # Vector Search via pgvector — require_metadata filters out
-            # the ~50k skeleton movies that lack TMDB data (no poster/votes).
             cold_k = max(limit * 5, 100) if not sort_by else retrieval_k
             candidates = await self.retrieve_candidates(
                 db, centroid, exclude_ids,
@@ -482,10 +552,28 @@ class RecommendationPipeline:
             recommendations = self._candidates_to_dicts(candidates)
 
         else:
-            # ── WARM USER (NeuMF ONNX Ranking) ──
-            diagnostics["pipeline_used"] = "neumf_ranker"
+            # ── S-CURVE BLENDED RANKING ────────────────────────────────────
+            #
+            # 1. Count interactions → compute α
+            # 2. Retrieve pgvector candidates (retrieval scores)
+            # 3. Run NeuMF ONNX on the same candidates
+            # 4. Blend: final = α·sigmoid(neumf) + (1-α)·norm(pgvector)
+            # 5. Re-sort by blended score
+            # ──────────────────────────────────────────────────────────────
 
-            # 3. Retrieve candidates via pgvector
+            interaction_count = await self._get_interaction_count(db, user_id)
+            alpha = _compute_blend_alpha(interaction_count)
+            diagnostics["interaction_count"] = interaction_count
+            diagnostics["blend_alpha"] = round(alpha, 4)
+
+            if alpha >= 1.0:
+                diagnostics["pipeline_used"] = "neumf_ranker"
+            elif alpha <= 0.0:
+                diagnostics["pipeline_used"] = "pgvector_only"
+            else:
+                diagnostics["pipeline_used"] = f"blended (α={round(alpha, 2)})"
+
+            # Stage 1: Retrieve candidates via pgvector (Two-Tower embedding)
             try:
                 candidates = await self.retrieve_candidates(
                     db, user_emb, exclude_ids,
@@ -503,44 +591,53 @@ class RecommendationPipeline:
             if not candidates:
                 return [], 0, diagnostics
 
-            # 4. Re-rank via ONNX
+            # Normalize pgvector retrieval scores to [0.05, 0.95]
+            raw_pgvector = [c.retrieval_score for c in candidates]
+            norm_pgvector = _min_max_normalize(raw_pgvector)
+
+            # Stage 2: NeuMF ONNX scoring
             try:
                 preprocessed = await asyncio.to_thread(
                     self.preprocess_for_ranker, user.model_user_index, candidates
                 )
-                scores = await asyncio.to_thread(
+                onnx_logits = await asyncio.to_thread(
                     self.rerank_candidates, preprocessed
                 )
-                raw_scores = scores.tolist()
-
-                # Sort by raw logit (descending) for ranking correctness
-                ranked = sorted(
-                    zip(candidates, raw_scores),
-                    key=lambda pair: pair[1],
-                    reverse=True,
-                )
-                ordered_candidates = [c for c, _ in ranked]
-                ordered_raw = [s for _, s in ranked]
-
-                # Convert raw logits to probabilities via Sigmoid
-                display_scores = _sigmoid_scores(ordered_raw)
-
-                recommendations = [
-                    {
-                        "id": c.movie_id,
-                        "title": c.title,
-                        "poster_path": c.poster_path,
-                        "genres": c.genres,
-                        "vote_average": c.vote_average,
-                        "release_date": c.release_date,
-                        "score": ds,
-                    }
-                    for c, ds in zip(ordered_candidates, display_scores)
-                ]
+                # Sigmoid-transform raw logits → [0, 1]
+                norm_neumf = _sigmoid_scores(onnx_logits.tolist())
             except Exception:
-                logger.exception("Ranking stage failed — falling back to retrieval order")
-                diagnostics["pipeline_used"] = "cold_start_fallback"
-                recommendations = self._candidates_to_dicts(candidates)
+                logger.exception(
+                    "NeuMF ranking failed — falling back to pgvector-only"
+                )
+                diagnostics["pipeline_used"] = "pgvector_only_fallback"
+                alpha = 0.0
+                norm_neumf = [0.0] * len(candidates)
+
+            # Blend scores: final = α·neumf + (1-α)·pgvector
+            blended = [
+                round(alpha * nm + (1.0 - alpha) * np_, 4)
+                for nm, np_ in zip(norm_neumf, norm_pgvector)
+            ]
+
+            # Pair candidates with blended scores and re-sort descending
+            scored = sorted(
+                zip(candidates, blended),
+                key=lambda pair: pair[1],
+                reverse=True,
+            )
+
+            recommendations = [
+                {
+                    "id": c.movie_id,
+                    "title": c.title,
+                    "poster_path": c.poster_path,
+                    "genres": c.genres,
+                    "vote_average": c.vote_average,
+                    "release_date": c.release_date,
+                    "score": score,
+                }
+                for c, score in scored
+            ]
 
         # ── 5. Optional external sort ─────────────────────────────────────
         if sort_by == "release_date_desc":
