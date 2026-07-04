@@ -19,6 +19,8 @@ torch==2.7.0
 pandas==2.2.3
 numpy==2.2.6
 onnxruntime==1.22.0
+onnx==1.17.0
+onnxscript
 sentence-transformers==3.4.1
 
 # TMDB hydration
