@@ -595,26 +595,51 @@ def main() -> None:
         if num_new_users > 0:
             logger.info("Found %d unmapped users. Assigning new model indices.", num_new_users)
             
-            new_user_mappings = []
-            new_idx = num_users
+            # Query the actual max model_user_index from the DB to avoid
+            # collisions when a previous run assigned indices but crashed
+            # before uploading updated weights.
+            max_idx_resp = (
+                sb.table("users")
+                .select("model_user_index")
+                .not_.is_("model_user_index", "null")
+                .order("model_user_index", desc=True)
+                .limit(1)
+                .execute()
+            )
             
+            if max_idx_resp.data:
+                db_max_idx = max_idx_resp.data[0]["model_user_index"]
+                next_idx = db_max_idx + 1
+            else:
+                next_idx = num_users
+            
+            # Use the higher of model size vs DB max to be safe
+            next_idx = max(next_idx, num_users)
+            
+            # If next_idx is higher than the model's current num_users, we MUST 
+            # pad the model with dummy rows to bridge the gap, otherwise the new 
+            # users will get indices that are out of bounds of the embedding matrix.
+            pad_users = next_idx - num_users
+            total_users_to_add = pad_users + num_new_users
+            
+            new_user_mappings = []
             for uid in unmapped_user_ids:
-                new_user_mappings.append({"id": str(uid), "model_user_index": new_idx})
-                user_map[str(uid)] = new_idx
-                new_idx += 1
+                new_user_mappings.append({"id": str(uid), "model_user_index": next_idx})
+                user_map[str(uid)] = next_idx
+                next_idx += 1
                 
-            # Bulk upsert new mappings into Supabase
-            sb.table("users").upsert(new_user_mappings).execute()
+            # Upsert with conflict on primary key 'id'
+            sb.table("users").upsert(new_user_mappings, on_conflict="id").execute()
             logger.info("Successfully upserted %d new users to Supabase.", num_new_users)
             
             # Remap interactions with the updated user_map
             interactions["user_index"] = interactions["user_id"].map(user_map)
             
-            # Expand state dict
-            state_dict = expand_user_embeddings_in_state_dict(state_dict, num_new_users, embed_dim)
-            
-            # Update num_users count
-            num_users += num_new_users
+            # Expand state dict (including any padding rows to bridge gaps)
+            if total_users_to_add > 0:
+                logger.info("Padding model with %d gap rows and %d new users...", pad_users, num_new_users)
+                state_dict = expand_user_embeddings_in_state_dict(state_dict, total_users_to_add, embed_dim)
+                num_users += total_users_to_add
 
         # Final drop to be absolutely safe
         interactions.dropna(subset=["user_index", "movie_index"], inplace=True)
