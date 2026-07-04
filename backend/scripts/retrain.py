@@ -101,8 +101,9 @@ class NeuMF(nn.Module):
             layers.append(nn.ReLU())
             layers.append(nn.Dropout(0.2))
             in_size = out_size
-        # Final MLP layer (no BN / ReLU / Dropout — feeds straight into predict)
+        # Final MLP layer — includes BN to match trained architecture
         layers.append(nn.Linear(in_size, MLP_LAYERS[-1]))
+        layers.append(nn.BatchNorm1d(MLP_LAYERS[-1]))
         self.mlp_layers = nn.Sequential(*layers)
 
         # Final prediction: concat(gmf, mlp_out) → 1
